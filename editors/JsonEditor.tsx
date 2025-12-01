@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { interpolateString } from '../utils';
 import { UserFunction, EditorType } from '../types';
-import { CodeEditor } from '../components/CodeEditor';
+import { CodeEditor, CodeEditorRef } from '../components/CodeEditor';
 import { ToolsPanel } from '../components/ToolsPanel';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelRightClose, PanelRightOpen, Wand2 } from 'lucide-react';
 
 interface JsonEditorProps {
     content: string;
@@ -16,6 +16,9 @@ interface JsonEditorProps {
     variableError: string | null;
     functions: UserFunction[];
     onFunctionsChange: (funcs: UserFunction[]) => void;
+    
+    // AI Prop
+    onAiAssist?: (prompt: string) => Promise<string>;
 }
 
 export const JsonEditor: React.FC<JsonEditorProps> = ({ 
@@ -26,13 +29,17 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
     onVariablesChange,
     variableError,
     functions,
-    onFunctionsChange
+    onFunctionsChange,
+    onAiAssist
 }) => {
     const [preview, setPreview] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(true);
     const [missingFunctions, setMissingFunctions] = useState<string[]>([]);
     
+    // Editor Ref
+    const editorRef = useRef<CodeEditorRef>(null);
+
     // Resize State
     const [previewWidth, setPreviewWidth] = useState(500);
     const [isResizing, setIsResizing] = useState(false);
@@ -113,6 +120,12 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
         }
     }, [content, variables, functions]);
 
+    const handleInsert = (text: string) => {
+        if (editorRef.current) {
+            editorRef.current.insertText(text);
+        }
+    };
+
     return (
         <div className="flex h-full w-full">
             <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden" ref={containerRef}>
@@ -122,6 +135,13 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
                         <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider flex justify-between items-center h-6">
                             <span>REST Body Template</span>
                             <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => editorRef.current?.format()}
+                                    className="text-slate-400 hover:text-teal-600 hover:bg-teal-50 p-0.5 rounded transition-colors"
+                                    title="Format Code (Ctrl+F)"
+                                >
+                                    <Wand2 size={14} />
+                                </button>
                                 <span className="text-teal-600 font-mono text-[10px]">Handlebars</span>
                                 <button 
                                     onClick={() => setIsPreviewOpen(!isPreviewOpen)}
@@ -134,6 +154,7 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
                         </div>
                         <div className="flex-1 min-h-0 relative">
                             <CodeEditor 
+                                ref={editorRef}
                                 language="json" 
                                 value={content} 
                                 onChange={(val) => onChange(val || '')} 
@@ -184,6 +205,9 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.JSON_REST}
                 missingFunctions={missingFunctions}
+                onInsert={handleInsert}
+                onUpdateContent={(val) => onChange(val)}
+                onAiAssist={onAiAssist}
             />
         </div>
     );

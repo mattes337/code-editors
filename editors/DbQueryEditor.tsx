@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { UserFunction, DbConnection, EditorType } from '../types';
-import { CodeEditor } from '../components/CodeEditor';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserFunction, DbConnection, EditorType, SqlLibrary } from '../types';
+import { CodeEditor, CodeEditorRef } from '../components/CodeEditor';
 import { ToolsPanel } from '../components/ToolsPanel';
 import { ConnectionManagerModal } from '../components/ConnectionManagerModal';
-import { Settings, Database, Play, Loader2, X, RefreshCw } from 'lucide-react';
+import { Settings, Database, Play, Loader2, X, RefreshCw, Wand2 } from 'lucide-react';
 import { interpolateString } from '../utils';
 
 interface DbQueryEditorProps {
@@ -29,6 +29,12 @@ interface DbQueryEditorProps {
     isExecuting: boolean;
     executionResult: string | null;
     onCancelQuery: () => void;
+
+    // Config
+    sqlLibrary?: SqlLibrary;
+
+    // AI Prop
+    onAiAssist?: (prompt: string) => Promise<string>;
 }
 
 export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({ 
@@ -47,11 +53,16 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
     onExecuteQuery,
     isExecuting,
     executionResult,
-    onCancelQuery
+    onCancelQuery,
+    sqlLibrary,
+    onAiAssist
 }) => {
     const [isManagerOpen, setIsManagerOpen] = useState(false);
     const [interpolatedQuery, setInterpolatedQuery] = useState('');
     const [missingFunctions, setMissingFunctions] = useState<string[]>([]);
+    
+    // Editor Ref
+    const editorRef = useRef<CodeEditorRef>(null);
 
     const activeConnection = connections.find(c => c.id === activeConnectionId);
     
@@ -81,6 +92,12 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
     const handleExecute = () => {
         if (activeConnection) {
             onExecuteQuery(interpolatedQuery, activeConnection);
+        }
+    };
+
+    const handleInsert = (text: string) => {
+        if (editorRef.current) {
+            editorRef.current.insertText(text);
         }
     };
 
@@ -125,10 +142,20 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
                     <div className="flex-1 flex flex-col min-h-0 p-4 min-w-0">
                         <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider flex justify-between items-center h-6">
                             <span>SQL Query Template</span>
-                            <span className="text-teal-600 font-mono text-[10px]">Handlebars Supported</span>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => editorRef.current?.format()}
+                                    className="text-slate-400 hover:text-teal-600 hover:bg-teal-50 p-0.5 rounded transition-colors"
+                                    title="Format Code (Ctrl+F)"
+                                >
+                                    <Wand2 size={14} />
+                                </button>
+                                <span className="text-teal-600 font-mono text-[10px]">Handlebars Supported</span>
+                            </div>
                         </div>
                         <div className="flex-1 min-h-0 relative">
                             <CodeEditor 
+                                ref={editorRef}
                                 language="sql" 
                                 value={content} 
                                 onChange={(val) => onChange(val || '')} 
@@ -141,7 +168,7 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
                     <div className="lg:w-1/3 flex flex-col min-h-0 bg-slate-50/50 p-4 border-l border-slate-200">
                          
                          {/* Compiled Query Section */}
-                         <div className="flex flex-col flex-shrink-0 h-1/3 min-h-[150px] mb-4">
+                         <div className="flex-col flex-shrink-0 h-1/3 min-h-[150px] mb-4 flex">
                             <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider h-6">Compiled Query</div>
                             <div className="flex-1 bg-white border border-slate-200 rounded-lg overflow-hidden relative">
                                 <CodeEditor 
@@ -234,6 +261,10 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
                 activeEditorType={EditorType.DB_QUERY}
                 sqlDialect={activeConnection?.dialect}
                 missingFunctions={missingFunctions}
+                sqlLibrary={sqlLibrary}
+                onInsert={handleInsert}
+                onUpdateContent={(val) => onChange(val)}
+                onAiAssist={onAiAssist}
             />
 
             <ConnectionManagerModal 

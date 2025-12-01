@@ -7,9 +7,10 @@ interface FunctionPanelProps {
   functions: UserFunction[];
   onUpdateFunctions: (funcs: UserFunction[]) => void;
   activeEditorType?: EditorType;
+  onInsert?: (text: string) => void;
 }
 
-export const FunctionPanel: React.FC<FunctionPanelProps> = ({ functions, onUpdateFunctions, activeEditorType }) => {
+export const FunctionPanel: React.FC<FunctionPanelProps> = ({ functions, onUpdateFunctions, activeEditorType, onInsert }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFunc, setEditingFunc] = useState<UserFunction | undefined>(undefined);
 
@@ -41,17 +42,24 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({ functions, onUpdat
     onUpdateFunctions(functions.filter(f => f.id !== id));
   };
 
-  const handleDragStart = (e: React.DragEvent, func: UserFunction) => {
+  const getInsertText = (func: UserFunction) => {
     let text = `${func.name}(${func.params.join(', ')})`;
-    
-    // If not in script editor, wrap in handlebars syntax
     if (activeEditorType !== EditorType.SCRIPT_JS) {
-        // Use the custom syntax supported by utils.ts for function calls
         text = `{{#func:${text}}}`;
     }
+    return text;
+  };
 
+  const handleDragStart = (e: React.DragEvent, func: UserFunction) => {
+    const text = getInsertText(func);
     e.dataTransfer.setData('text/plain', text);
     e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  const handleClick = (func: UserFunction) => {
+      if (onInsert) {
+          onInsert(getInsertText(func));
+      }
   };
 
   return (
@@ -62,7 +70,9 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({ functions, onUpdat
             key={func.id}
             draggable
             onDragStart={(e) => handleDragStart(e, func)}
-            className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-grab active:cursor-grabbing group/card relative"
+            onClick={() => handleClick(func)}
+            className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-pointer group/card relative"
+            title="Click or drag to insert function"
           >
             <div className="flex justify-between items-start mb-2">
                 <div className="font-mono text-sm text-teal-700 font-semibold flex items-center gap-2">
@@ -76,7 +86,7 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({ functions, onUpdat
             
             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
                 <button 
-                    onClick={() => handleEdit(func)} 
+                    onClick={(e) => { e.stopPropagation(); handleEdit(func); }} 
                     className="p-1.5 hover:bg-teal-50 rounded text-slate-400 hover:text-teal-600 transition-colors"
                     title="Edit Function"
                 >

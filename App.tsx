@@ -1,138 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EditorType, UserFunction, DbConnection } from './types';
+import { EditorType, UserFunction, DbConnection, HostImage } from './types';
 import { JsonEditor } from './editors/JsonEditor';
 import { HtmlEditor } from './editors/HtmlEditor';
 import { ScriptEditor } from './editors/ScriptNodeEditor';
 import { DbQueryEditor } from './editors/DbQueryEditor';
-import { FileJson, Mail, Workflow, Leaf, Settings, Database } from 'lucide-react';
-
-const DEFAULT_VARIABLES_JSON = `{
-  "meta": {
-    "requestId": "req_init_001",
-    "timestamp": "2024-03-20T14:30:00Z",
-    "environment": "production"
-  },
-  "user": {
-    "id": "u_8823",
-    "name": "Alex Rivera",
-    "email": "alex.rivera@example.com",
-    "isActive": true,
-    "roles": ["admin", "reviewer"],
-    "preferences": {
-        "notifications": true,
-        "theme": "dark"
-    }
-  },
-  "order": {
-    "id": "ord_2024_001",
-    "currency": "USD",
-    "total": 245.50,
-    "shippingAddress": "123 Tech Blvd, Silicon Valley, CA",
-    "items": [
-        { "sku": "MK-850", "qty": 1, "price": 120.00 },
-        { "sku": "USB-C-HUB", "qty": 2, "price": 45.00 },
-        { "sku": "WIFI-6E", "qty": 1, "price": 35.50 }
-    ]
-  }
-}`;
-
-const DEFAULT_JSON_CONTENT = `{
-  "meta": {
-    "requestId": "{{#func:generateReqId()}}",
-    "timestamp": "{{ meta.timestamp }}",
-    "apiVersion": "v2",
-    "isProduction": {{#func:isProduction(meta.environment)}}
-  },
-  "userInfo": {
-    "id": "{{ user.id }}",
-    "displayName": "{{ user.name }}",
-    "email": "{{ user.email }}",
-    "status": "{{#if user.isActive}}Active{{else}}Inactive{{/if}}",
-    "roles": [
-      {{#each user.roles}}
-      "{{ uppercase this }}"{{#unless @last}},{{/unless}}
-      {{/each}}
-    ],
-    "preferences": {
-      {{#each user.preferences}}
-      "{{ @key }}": "{{ this }}"{{#unless @last}},{{/unless}}
-      {{/each}}
-    }
-  },
-  "order": {
-    "id": "{{ order.id }}",
-    "currency": "{{ order.currency }}",
-    "shipping": {
-      "method": "{{#if order.shippingAddress}}Delivery{{else}}Pickup{{/if}}",
-      "address": "{{#if order.shippingAddress}}{{ order.shippingAddress }}{{else}}N/A{{/if}}"
-    },
-    "items": [
-      {{#each order.items}}
-      {
-        "sku": "{{ this.sku }}",
-        "qty": {{ this.qty }},
-        "unitPrice": {{ this.price }},
-        "lineTotal": {{#func:calcLineTotal(this.qty, this.price)}},
-        "highValue": {{#func:isHighValue(this.qty, this.price)}}
-      }{{#unless @last}},{{/unless}}
-      {{/each}}
-    ],
-    "totals": {
-      "subtotal": {{ order.total }},
-      "tax": {{#func:calcTax(order.total)}},
-      "grandTotal": {{#func:calcGrandTotal(order.total)}},
-      "formatted": "{{#func:formatCurrency(order.total, order.currency)}}"
-    }
-  }
-}`;
-
-const DEFAULT_HTML_CONTENT = `<!DOCTYPE html>
-<html>
-<body style="font-family: sans-serif; background: #f4f4f4; padding: 20px;">
-  <div style="background: white; padding: 20px; border-radius: 8px;">
-    <h1 style="color: #333;">Welcome, {{ user.name }}!</h1>
-    
-    {{#if user.preferences.notifications}}
-      <div style="background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 4px; margin: 10px 0;">
-        You have notifications enabled.
-      </div>
-    {{/if}}
-
-    <p>Your ID is: <strong>{{ user.id }}</strong></p>
-    <p>Registration Date: {{#func:formatDate(1672531200000)}}</p>
-    <p>Tax on 100: {{#func:calcTax(100)}}</p>
-
-    <a href="https://example.com/login?uid={{ user.id }}" style="display: inline-block; background: #0d9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 20px;">
-      Get Started
-    </a>
-  </div>
-</body>
-</html>`;
-
-const DEFAULT_SCRIPT_CONTENT = `// Access variables via 'ctx'
-// Use 'log(msg)' to print to console
-// User functions are available globally
-
-log("Starting script execution...");
-ctx.timestamp = Date.now();
-
-if (ctx.user && ctx.user.id) {
-    const tax = calcTax(100);
-    log("Calculated Tax for user: " + tax);
-    ctx.lastCalculatedTax = tax;
-}
-
-log("Script finished.");`;
-
-const DEFAULT_SQL_CONTENT = `-- Select orders for the current user
-SELECT 
-    o.id, 
-    o.total, 
-    o.created_at
-FROM orders o
-WHERE 
-    o.user_id = '{{ user.id }}' 
-    AND o.status = 'active';`;
+import { XmlEditor } from './editors/XmlEditor';
+import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode } from 'lucide-react';
+import { DEFAULT_EMAIL_SNIPPET_GROUPS, DEFAULT_SQL_DIALECT_DATA, DEFAULT_XML_SNIPPET_GROUPS } from './constants';
+import {
+  DEFAULT_VARIABLES_JSON,
+  DEFAULT_JSON_CONTENT,
+  DEFAULT_HTML_CONTENT,
+  DEFAULT_SCRIPT_CONTENT,
+  DEFAULT_SQL_CONTENT,
+  DEFAULT_XML_CONTENT,
+  DEFAULT_FUNCTIONS,
+  DEFAULT_DB_CONNECTIONS,
+  DEFAULT_HOST_IMAGES
+} from './defaults';
+import {
+  generateJsonAssistResponse,
+  generateHtmlAssistResponse,
+  generateScriptAssistResponse,
+  generateSqlAssistResponse,
+  generateXmlAssistResponse
+} from './services/ai-service';
 
 export default function App() {
   // Global Store State
@@ -143,6 +35,7 @@ export default function App() {
   const [htmlContent, setHtmlContent] = useState(DEFAULT_HTML_CONTENT);
   const [scriptContent, setScriptContent] = useState(DEFAULT_SCRIPT_CONTENT);
   const [sqlContent, setSqlContent] = useState(DEFAULT_SQL_CONTENT);
+  const [xmlContent, setXmlContent] = useState(DEFAULT_XML_CONTENT);
 
   // Context State
   const [variablesJson, setVariablesJson] = useState<string>(DEFAULT_VARIABLES_JSON);
@@ -156,22 +49,13 @@ export default function App() {
   });
   const [variableError, setVariableError] = useState<string | null>(null);
   
-  const [functions, setFunctions] = useState<UserFunction[]>([
-    { id: '1', name: 'formatDate', params: ['ts'], body: 'return new Date(ts).toISOString().split("T")[0];' },
-    { id: '2', name: 'calcTax', params: ['amount'], body: 'return (Number(amount) * 0.1).toFixed(2);' },
-    { id: '3', name: 'formatCurrency', params: ['amount', 'currency'], body: 'return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(amount);' },
-    { id: '4', name: 'generateReqId', params: [], body: "return 'req_' + Math.random().toString(36).substr(2, 9);" },
-    { id: '5', name: 'isProduction', params: ['env'], body: "return env === 'production';" },
-    { id: '6', name: 'calcLineTotal', params: ['qty', 'price'], body: "return (Number(qty) * Number(price)).toFixed(2);" },
-    { id: '7', name: 'isHighValue', params: ['qty', 'price'], body: "return (Number(qty) * Number(price)) > 60;" },
-    { id: '8', name: 'calcGrandTotal', params: ['total'], body: "return (Number(total) * 1.1).toFixed(2);" }
-  ]);
+  const [functions, setFunctions] = useState<UserFunction[]>(DEFAULT_FUNCTIONS);
+
+  // Image State
+  const [hostImages, setHostImages] = useState<HostImage[]>(DEFAULT_HOST_IMAGES);
 
   // DB Connection & Execution State
-  const [dbConnections, setDbConnections] = useState<DbConnection[]>([
-    { id: '1', name: 'Main Postgres', dialect: 'postgres', connectionString: 'postgres://admin:pass@localhost:5432/main_db' },
-    { id: '2', name: 'Legacy MySQL', dialect: 'mysql', connectionString: 'mysql://root:root@192.168.1.50:3306/legacy' }
-  ]);
+  const [dbConnections, setDbConnections] = useState<DbConnection[]>(DEFAULT_DB_CONNECTIONS);
   const [activeConnectionId, setActiveConnectionId] = useState<string>('1');
   const [isDbExecuting, setIsDbExecuting] = useState(false);
   const [dbExecutionResult, setDbExecutionResult] = useState<string | null>(null);
@@ -216,6 +100,15 @@ export default function App() {
       setDbExecutionResult(null); // Optional: clear result or leave previous
   };
 
+  // Image Handlers
+  const handleAddImage = (img: HostImage) => {
+      setHostImages(prev => [img, ...prev]);
+  };
+
+  const handleDeleteImage = (id: string) => {
+      setHostImages(prev => prev.filter(img => img.id !== id));
+  };
+
   // Clean up timeout on unmount
   useEffect(() => {
       return () => {
@@ -224,6 +117,30 @@ export default function App() {
           }
       };
   }, []);
+
+  // --- AI Assistance Handlers ---
+
+  const handleJsonAssist = async (prompt: string): Promise<string> => {
+    return generateJsonAssistResponse(prompt, jsonContent, variablesJson, functions);
+  };
+
+  const handleHtmlAssist = async (prompt: string): Promise<string> => {
+    // Pass the current state of hostImages, not the default
+    return generateHtmlAssistResponse(prompt, htmlContent, variablesJson, functions, hostImages);
+  };
+
+  const handleScriptAssist = async (prompt: string): Promise<string> => {
+    return generateScriptAssistResponse(prompt, scriptContent, variablesJson, functions);
+  };
+
+  const handleSqlAssist = async (prompt: string): Promise<string> => {
+    const activeConnection = dbConnections.find(c => c.id === activeConnectionId);
+    return generateSqlAssistResponse(prompt, sqlContent, variablesJson, functions, activeConnection);
+  };
+
+  const handleXmlAssist = async (prompt: string): Promise<string> => {
+    return generateXmlAssistResponse(prompt, xmlContent, variablesJson, functions);
+  };
 
   // Common props for all editors
   const commonProps = {
@@ -242,6 +159,7 @@ export default function App() {
           <JsonEditor 
             content={jsonContent}
             onChange={setJsonContent}
+            onAiAssist={handleJsonAssist}
             {...commonProps}
           />
         );
@@ -250,6 +168,11 @@ export default function App() {
           <HtmlEditor 
             content={htmlContent}
             onChange={setHtmlContent}
+            emailBlockGroups={DEFAULT_EMAIL_SNIPPET_GROUPS}
+            hostImages={hostImages}
+            onAddImage={handleAddImage}
+            onDeleteImage={handleDeleteImage}
+            onAiAssist={handleHtmlAssist}
             {...commonProps}
           />
         );
@@ -258,6 +181,7 @@ export default function App() {
           <ScriptEditor 
             content={scriptContent}
             onChange={setScriptContent}
+            onAiAssist={handleScriptAssist}
             {...commonProps}
           />
         );
@@ -274,8 +198,20 @@ export default function App() {
                 isExecuting={isDbExecuting}
                 executionResult={dbExecutionResult}
                 onCancelQuery={handleCancelQuery}
+                sqlLibrary={DEFAULT_SQL_DIALECT_DATA}
+                onAiAssist={handleSqlAssist}
                 {...commonProps}
             />
+        );
+      case EditorType.XML_TEMPLATE:
+        return (
+          <XmlEditor 
+            content={xmlContent}
+            onChange={setXmlContent}
+            xmlBlockGroups={DEFAULT_XML_SNIPPET_GROUPS}
+            onAiAssist={handleXmlAssist}
+            {...commonProps}
+          />
         );
       default:
         return <div>Select an editor</div>;
@@ -307,6 +243,12 @@ export default function App() {
                onClick={() => setActiveEditor(EditorType.EMAIL_HTML)}
                icon={<Mail size={16} />}
                label="HTML Email"
+             />
+             <NavPill 
+               active={activeEditor === EditorType.XML_TEMPLATE}
+               onClick={() => setActiveEditor(EditorType.XML_TEMPLATE)}
+               icon={<FileCode size={16} />}
+               label="XML"
              />
              <NavPill 
                active={activeEditor === EditorType.SCRIPT_JS}

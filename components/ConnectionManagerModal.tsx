@@ -95,6 +95,28 @@ export const ConnectionManagerModal: React.FC<ConnectionManagerModalProps> = ({
     }, 1200);
   };
 
+  const getDisplayName = (d: SqlDialect) => {
+      switch(d) {
+          case 'mssql': return 'MS SQL';
+          case 'postgres-vector': return 'PG Vector';
+          case 'duckdb': return 'DuckDB';
+          case 'seekdb': return 'SeekDB';
+          default: return d;
+      }
+  };
+
+  const getPlaceholder = (d: SqlDialect) => {
+      switch(d) {
+          case 'postgres': return 'postgresql://user:pass@host:5432/db';
+          case 'postgres-vector': return 'postgresql://user:pass@host:5432/db?sslmode=require';
+          case 'mysql': return 'mysql://user:pass@host:3306/db';
+          case 'duckdb': return 'duckdb://:memory: or path/to/file.db';
+          case 'seekdb': return 'seekdb://api_key@host/instance';
+          case 'mssql': return 'sqlserver://host:1433;database=db;user=u;password=p';
+          default: return 'Connection URI';
+      }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex h-[70vh] border border-slate-200 overflow-hidden">
@@ -120,7 +142,7 @@ export const ConnectionManagerModal: React.FC<ConnectionManagerModalProps> = ({
                     >
                         <div className="font-medium text-slate-700 text-sm mb-1">{conn.name}</div>
                         <div className="text-xs text-slate-400 font-mono flex items-center gap-1">
-                            <Server size={10} /> {conn.dialect}
+                            <Server size={10} /> {getDisplayName(conn.dialect)}
                         </div>
                         <button 
                             onClick={(e) => handleDelete(conn.id, e)}
@@ -166,7 +188,7 @@ export const ConnectionManagerModal: React.FC<ConnectionManagerModalProps> = ({
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Dialect</label>
                         <div className="grid grid-cols-3 gap-3">
-                            {(['postgres', 'mysql', 'mssql'] as SqlDialect[]).map(d => (
+                            {(['postgres', 'mysql', 'mssql', 'postgres-vector', 'duckdb', 'seekdb'] as SqlDialect[]).map(d => (
                                 <button
                                     key={d}
                                     onClick={() => setDialect(d)}
@@ -175,7 +197,7 @@ export const ConnectionManagerModal: React.FC<ConnectionManagerModalProps> = ({
                                             ? 'bg-teal-50 border-teal-500 text-teal-700' 
                                             : 'bg-white border-slate-200 text-slate-600 hover:border-teal-200'}`}
                                 >
-                                    <span className="capitalize">{d === 'mssql' ? 'MS SQL' : d}</span>
+                                    <span className={['postgres', 'mysql'].includes(d) ? 'capitalize' : ''}>{getDisplayName(d)}</span>
                                 </button>
                             ))}
                         </div>
@@ -189,7 +211,7 @@ export const ConnectionManagerModal: React.FC<ConnectionManagerModalProps> = ({
                                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 text-slate-800"
                                     value={connectionString}
                                     onChange={e => setConnectionString(e.target.value)}
-                                    placeholder={dialect === 'postgres' ? 'postgresql://user:pass@host:5432/db' : 'Connection URI'}
+                                    placeholder={getPlaceholder(dialect)}
                                 />
                              </div>
                              <button
