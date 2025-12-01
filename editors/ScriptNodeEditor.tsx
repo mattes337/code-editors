@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserFunction, EditorType } from '../types';
 import { executeScript } from '../utils';
-import { Play, RefreshCw, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { Play, RefreshCw, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
 import { TreeView } from '../components/TreeView';
-import { CodeEditor } from '../components/CodeEditor';
+import { CodeEditor, CodeEditorRef } from '../components/CodeEditor';
 import { ToolsPanel } from '../components/ToolsPanel';
 
 interface ScriptEditorProps {
@@ -20,6 +20,9 @@ interface ScriptEditorProps {
     
     // Optional
     onUpdateVariables?: (newVars: Record<string, any>) => void;
+
+    // AI Prop
+    onAiAssist?: (prompt: string) => Promise<string>;
 }
 
 export const ScriptEditor: React.FC<ScriptEditorProps> = ({ 
@@ -31,12 +34,16 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     variableError,
     functions,
     onFunctionsChange,
-    onUpdateVariables 
+    onUpdateVariables,
+    onAiAssist
 }) => {
     const [executionResult, setExecutionResult] = useState<{ logs: string[], finalContext: any, error?: string } | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isConsoleOpen, setIsConsoleOpen] = useState(true);
     const [isContextOpen, setIsContextOpen] = useState(true);
+
+    // Editor Ref
+    const editorRef = useRef<CodeEditorRef>(null);
 
     // Resize State
     const [sidebarWidth, setSidebarWidth] = useState(400);
@@ -95,6 +102,12 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
         setIsSidebarOpen(!isSidebarOpen);
     };
 
+    const handleInsert = (text: string) => {
+        if (editorRef.current) {
+            editorRef.current.insertText(text);
+        }
+    };
+
     return (
         <div className="flex h-full w-full">
             <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden" ref={containerRef}>
@@ -105,8 +118,15 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                 <span>Logic Script</span>
                                 <button 
+                                    onClick={() => editorRef.current?.format()}
+                                    className="text-slate-400 hover:text-teal-600 hover:bg-teal-50 p-0.5 rounded transition-colors"
+                                    title="Format Code (Ctrl+F)"
+                                >
+                                    <Wand2 size={14} />
+                                </button>
+                                <button 
                                     onClick={toggleSidebar}
-                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors"
+                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors ml-2"
                                     title={isSidebarOpen ? "Collapse Output Sidebar" : "Show Output Sidebar"}
                                 >
                                     {isSidebarOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
@@ -122,6 +142,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
 
                         <div className="flex-1 min-h-0 relative">
                              <CodeEditor 
+                                ref={editorRef}
                                 language="javascript" 
                                 value={content} 
                                 onChange={(val) => onChange(val || '')} 
@@ -218,6 +239,9 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                 functions={functions}
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.SCRIPT_JS}
+                onInsert={handleInsert}
+                onUpdateContent={(val) => onChange(val)}
+                onAiAssist={onAiAssist}
             />
         </div>
     );

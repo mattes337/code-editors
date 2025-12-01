@@ -5,6 +5,7 @@ import { ChevronRight, ChevronDown, Braces, Box, Hash, Type, ToggleLeft, List, A
 interface Props {
   data: Record<string, any>;
   editorType?: EditorType;
+  onInsert?: (text: string) => void;
 }
 
 const getType = (value: any): VariableNode['type'] => {
@@ -45,23 +46,29 @@ const TypeIcon = ({ type }: { type: string }) => {
   }
 };
 
-const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType }> = ({ node, editorType }) => {
+const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType; onInsert?: (text: string) => void }> = ({ node, editorType, onInsert }) => {
   const [isOpen, setIsOpen] = useState(false);
   const isExpandable = (node.type === 'object' || node.type === 'array') && node.children && node.children.length > 0;
 
-  const handleDragStart = (e: React.DragEvent) => {
-    // Format based on editor type
-    let text = node.path;
-    
+  const getInsertText = () => {
     if (editorType === EditorType.SCRIPT_JS) {
-      text = `ctx.${node.path}`;
+        return `ctx.${node.path}`;
     } else {
-      // Default to Handlebars for JSON, HTML, and SQL
-      text = `{{ ${node.path} }}`;
+        return `{{ ${node.path} }}`;
     }
+  };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    const text = getInsertText();
     e.dataTransfer.setData('text/plain', text);
     e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onInsert) {
+          onInsert(getInsertText());
+      }
   };
 
   return (
@@ -70,7 +77,8 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType }> = ({ n
         className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer hover:bg-teal-50 group transition-colors`}
         draggable
         onDragStart={handleDragStart}
-        title={`Drag to insert: ${editorType === EditorType.SCRIPT_JS ? `ctx.${node.path}` : `{{ ${node.path} }}`}`}
+        onClick={handleClick}
+        title={`Click or drag to insert: ${getInsertText()}`}
       >
         <div 
           onClick={(e) => {
@@ -99,7 +107,7 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType }> = ({ n
       {isOpen && node.children && (
         <div className="border-l border-slate-200 ml-2">
           {node.children.map((child) => (
-            <TreeNode key={child.path} node={child} editorType={editorType} />
+            <TreeNode key={child.path} node={child} editorType={editorType} onInsert={onInsert} />
           ))}
         </div>
       )}
@@ -107,13 +115,13 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType }> = ({ n
   );
 };
 
-export const VariableTree: React.FC<Props> = ({ data, editorType }) => {
+export const VariableTree: React.FC<Props> = ({ data, editorType, onInsert }) => {
   const tree = buildTree(data);
 
   return (
     <div className="h-full overflow-y-auto p-2">
       {tree.map((node) => (
-        <TreeNode key={node.path} node={node} editorType={editorType} />
+        <TreeNode key={node.path} node={node} editorType={editorType} onInsert={onInsert} />
       ))}
       {tree.length === 0 && (
          <p className="text-slate-400 text-sm p-4 italic text-center">No variables found in Test Data.</p>

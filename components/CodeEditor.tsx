@@ -1,18 +1,54 @@
-import React, { useRef } from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import Editor, { loader } from '@monaco-editor/react';
+
+// Configure Monaco loader to use jsdelivr for stable worker loading
+// This fixes the "Failed to execute 'importScripts'" error in some environments
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs',
+  },
+});
+
+export interface CodeEditorRef {
+  insertText: (text: string) => void;
+  format: () => void;
+}
 
 interface CodeEditorProps {
   value: string;
-  language: 'json' | 'html' | 'javascript' | 'sql';
+  language: 'json' | 'html' | 'javascript' | 'sql' | 'xml';
   onChange: (value: string | undefined) => void;
   readOnly?: boolean;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ value, language, onChange, readOnly = false }) => {
+export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ value, language, onChange, readOnly = false }, ref) => {
   const editorRef = useRef<any>(null);
+
+  useImperativeHandle(ref, () => ({
+    insertText: (text: string) => {
+      if (editorRef.current) {
+        const selection = editorRef.current.getSelection();
+        const id = { major: 1, minor: 1 };
+        const op = { range: selection, text: text, forceMoveMarkers: true };
+        editorRef.current.executeEdits("insert-snippet", [op]);
+        editorRef.current.focus();
+      }
+    },
+    format: () => {
+      if (editorRef.current) {
+        editorRef.current.getAction('editor.action.formatDocument')?.run();
+      }
+    }
+  }));
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
+
+    // Bind Ctrl+F to Format Document
+    // Note: This overrides the default Find action
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+        editor.getAction('editor.action.formatDocument')?.run();
+    });
 
     // Define the custom theme matching our slate/teal palette
     monaco.editor.defineTheme('clean-slate', {
@@ -97,8 +133,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, language, onChang
           padding: { top: 16, bottom: 16 },
           wordWrap: 'on',
           automaticLayout: true,
+          formatOnPaste: true,
+          formatOnType: true,
         }}
       />
     </div>
   );
-};
+});
+
+CodeEditor.displayName = 'CodeEditor';
