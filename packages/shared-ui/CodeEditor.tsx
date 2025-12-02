@@ -2,7 +2,6 @@ import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 
 // Configure Monaco loader to use jsdelivr for stable worker loading
-// This fixes the "Failed to execute 'importScripts'" error in some environments
 loader.config({
   paths: {
     vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs',
@@ -16,28 +15,97 @@ export interface CodeEditorRef {
 
 interface CodeEditorProps {
   value: string;
-  language: 'json' | 'html' | 'javascript' | 'sql' | 'xml';
+  language: 'json' | 'html' | 'javascript' | 'sql' | 'xml' | 'handlebars' | 'text';
   onChange: (value: string | undefined) => void;
   readOnly?: boolean;
 }
 
+// Custom formatter for JSON mixed with Handlebars
+// This avoids using the strict JSON formatter which breaks on {{ }} syntax
+const formatHandlebarsJsonLines = (text: string): string => {
+    const lines = text.split('\n');
+    let indentLevel = 0;
+    const indentSize = 2;
+    
+    return lines.map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return '';
+        
+        // Detect dedent triggers at start of line
+        // Matches: }, ], {{/..., {{else..., {{^...
+        const isDedent = /^([}\]],?|\{\{\/|\{\{else|\{\{\^)/.test(trimmed);
+        
+        if (isDedent) {
+            indentLevel = Math.max(0, indentLevel - 1);
+        }
+        
+        const indentedLine = ' '.repeat(indentLevel * indentSize) + trimmed;
+        
+        // Detect indent triggers for the NEXT line
+        
+        // 1. JSON Structural Openers: Ends with { or [
+        if (trimmed.endsWith('{') || trimmed.endsWith('[')) {
+            indentLevel++;
+        }
+        
+        // 2. Handlebars Block Openers: {{#... or {{^... 
+        // But NOT if the block is closed on the same line (inline block)
+        // e.g. {{#each x}}...{{/each}} should not increase indent
+        const isHbBlockStart = /^\{\{\s*[#^]/.test(trimmed);
+        const hasHbBlockEnd = /\{\{\s*\//.test(trimmed);
+        
+        if (isHbBlockStart && !hasHbBlockEnd) {
+             indentLevel++;
+        }
+        
+        // 3. Handlebars Control Flow: {{else}}
+        // The 'else' line itself was dedented above, but the content following it should be indented
+        if (/^\{\{\s*else/.test(trimmed)) {
+            indentLevel++;
+        }
+
+        return indentedLine;
+    }).join('\n');
+};
+
 export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ value, language, onChange, readOnly = false }, ref) => {
   const editorRef = useRef<any>(null);
+
+  const performFormat = async () => {
+    if (editorRef.current) {
+      const model = editorRef.current.getModel();
+      const text = model.getValue();
+
+      // If it looks like a Handlebars template in JSON, use custom indentation formatter
+      // This prevents the JSON formatter from destroying the template structure (e.g. adding extra braces)
+      // and prevents breaking inline blocks by preserving existing line breaks.
+      if (language === 'json' && text.includes('{{')) {
+          const formatted = formatHandlebarsJsonLines(text);
+          if (formatted !== text) {
+             editorRef.current.setValue(formatted);
+          }
+          return;
+      }
+
+      // Run the standard formatter for valid JSON/JS/HTML
+      await editorRef.current.getAction('editor.action.formatDocument')?.run();
+      
+      // Standard post-processing cleanup (mostly for non-template JSON artifacts if any remain)
+      // ... (Legacy cleanup kept just in case standard formatter runs)
+    }
+  };
 
   useImperativeHandle(ref, () => ({
     insertText: (text: string) => {
       if (editorRef.current) {
         const selection = editorRef.current.getSelection();
-        const id = { major: 1, minor: 1 };
         const op = { range: selection, text: text, forceMoveMarkers: true };
         editorRef.current.executeEdits("insert-snippet", [op]);
         editorRef.current.focus();
       }
     },
     format: () => {
-      if (editorRef.current) {
-        editorRef.current.getAction('editor.action.formatDocument')?.run();
-      }
+      performFormat();
     }
   }));
 
@@ -45,9 +113,8 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ value, l
     editorRef.current = editor;
 
     // Bind Ctrl+F to Format Document
-    // Note: This overrides the default Find action
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
-        editor.getAction('editor.action.formatDocument')?.run();
+        performFormat();
     });
 
     // Define the custom theme matching our slate/teal palette
@@ -88,7 +155,6 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ value, l
         const text = e.dataTransfer?.getData('text/plain');
         if (text) {
             // Sanitize text: remove snippet tabstops ($0) and fix escaped braces
-            // Artifact reported: {{ user.id \}}$0
             let cleanText = text;
             if (cleanText.endsWith('$0')) {
                 cleanText = cleanText.substring(0, cleanText.length - 2);
@@ -133,8 +199,9 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ value, l
           padding: { top: 16, bottom: 16 },
           wordWrap: 'on',
           automaticLayout: true,
-          formatOnPaste: true,
-          formatOnType: true,
+          // Disable auto-formatting to prevent accidental breakage of Handlebars syntax
+          formatOnPaste: false,
+          formatOnType: false,
         }}
       />
     </div>

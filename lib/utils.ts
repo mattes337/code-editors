@@ -91,12 +91,14 @@ const registerHelpers = (functions: UserFunction[]) => {
  */
 const preprocessTemplate = (template: string): string => {
     // Regex matches: {{#func:NAME(ARGS)}}
+    // Updated to be tolerant of whitespace/newlines which might be introduced by editors
     // Note: We deliberately strip the '#' to treating it as an inline helper expression
-    // because the syntax is primarily used for value injection (e.g. "id": "{{#func:...}}")
-    return template.replace(/{{#func:([a-zA-Z0-9_]+)\((.*?)\)}}/g, (match, name, argsString) => {
+    return template.replace(/\{\{\s*#func:([a-zA-Z0-9_]+)\s*\(([\s\S]*?)\)\s*\}\}/g, (match, name, argsString) => {
         // We need to convert comma-separated args to space-separated for Handlebars
+        // First collapse any newlines in arguments to spaces to ensure clean processing
+        const cleanArgs = argsString.replace(/[\r\n]+/g, ' ');
         // We carefully replace commas only if they are NOT inside quotes
-        const args = argsString.replace(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g, ' ');
+        const args = cleanArgs.replace(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g, ' ');
         return `{{ func '${name}' ${args} }}`;
     });
 };

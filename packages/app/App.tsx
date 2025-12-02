@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EditorType, UserFunction, DbConnection, HostImage } from '../../lib/types';
+import { EditorType, UserFunction, DbConnection, HostImage, NamedAuthConfig, ApiSource } from '../../lib/types';
 import { JsonEditor } from '../json-editor/JsonEditor';
 import { HtmlEditor } from '../html-editor/HtmlEditor';
 import { ScriptEditor } from '../script-editor/ScriptEditor';
 import { DbQueryEditor } from '../db-query-editor/DbQueryEditor';
 import { XmlEditor } from '../xml-editor/XmlEditor';
-import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode } from 'lucide-react';
+import { RestEditor } from '../rest-editor/RestEditor';
+import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode, Globe } from 'lucide-react';
 import { DEFAULT_EMAIL_SNIPPET_GROUPS, DEFAULT_SQL_DIALECT_DATA, DEFAULT_XML_SNIPPET_GROUPS } from '../../lib/constants';
 import {
   DEFAULT_VARIABLES_JSON,
@@ -23,7 +24,8 @@ import {
   generateHtmlAssistResponse,
   generateScriptAssistResponse,
   generateSqlAssistResponse,
-  generateXmlAssistResponse
+  generateXmlAssistResponse,
+  generateRestAssistResponse
 } from '../../lib/ai-service';
 
 export default function App() {
@@ -60,6 +62,20 @@ export default function App() {
   const [isDbExecuting, setIsDbExecuting] = useState(false);
   const [dbExecutionResult, setDbExecutionResult] = useState<string | null>(null);
   const executionTimeoutRef = useRef<number | null>(null);
+
+  // Auth Credentials State for REST Editor
+  const [authCredentials, setAuthCredentials] = useState<NamedAuthConfig[]>([]);
+
+  // REST Editor API Sources
+  const [apiSources, setApiSources] = useState<ApiSource[]>([
+    {
+        id: 'src_petstore',
+        name: 'Petstore API',
+        baseUrl: 'https://petstore.swagger.io/v2',
+        specUrl: 'https://petstore.swagger.io/v2/swagger.json',
+        lastFetched: Date.now()
+    }
+  ]);
 
   // Parse variables JSON whenever it changes (updates from user input)
   useEffect(() => {
@@ -142,6 +158,10 @@ export default function App() {
     return generateXmlAssistResponse(prompt, xmlContent, variablesJson, functions);
   };
 
+  const handleRestAssist = async (prompt: string): Promise<string> => {
+    return generateRestAssistResponse(prompt, variablesJson, functions, apiSources);
+  };
+
   // Common props for all editors
   const commonProps = {
     variables: variablesObj,
@@ -213,6 +233,17 @@ export default function App() {
             {...commonProps}
           />
         );
+      case EditorType.REST_API:
+        return (
+          <RestEditor 
+            authCredentials={authCredentials}
+            onAuthCredentialsChange={setAuthCredentials}
+            apiSources={apiSources}
+            onApiSourcesChange={setApiSources}
+            onAiAssist={handleRestAssist}
+            {...commonProps}
+          />
+        );
       default:
         return <div>Select an editor</div>;
     }
@@ -237,6 +268,12 @@ export default function App() {
                onClick={() => setActiveEditor(EditorType.JSON_REST)}
                icon={<FileJson size={16} />}
                label="JSON"
+             />
+             <NavPill 
+               active={activeEditor === EditorType.REST_API}
+               onClick={() => setActiveEditor(EditorType.REST_API)}
+               icon={<Globe size={16} />}
+               label="Rest"
              />
              <NavPill 
                active={activeEditor === EditorType.EMAIL_HTML}

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { UserFunction, DbConnection, HostImage } from "./types";
+import { UserFunction, DbConnection, HostImage, ApiSource } from "./types";
 
 const commonInstruction = `
     IMPORTANT SYNTAX RULES (STRICT HANDLEBARS):
@@ -111,6 +111,48 @@ export const generateXmlAssistResponse = async (prompt: string, content: string,
     Your goal is to help the user structure XML data correctly.
     If providing code, provide the specific XML snippet.
     ALWAYS wrap your code in a markdown code block (e.g. \`\`\`xml ... \`\`\`).`;
+
+    return handleAiAssist(systemInstruction, prompt, context);
+};
+
+export const generateRestAssistResponse = async (prompt: string, variablesJson: string, functions: UserFunction[], apiSources: ApiSource[] = []) => {
+    let sourceContext = "";
+    if (apiSources.length > 0) {
+        sourceContext = "\n\nAvailable API Sources:\n" + apiSources.map(s => {
+            let info = `- ${s.name}: ${s.baseUrl}`;
+            if (s.spec && s.spec.paths) {
+                 const paths = Object.keys(s.spec.paths);
+                 // Limit context to avoid token limits, but provide a good chunk
+                 const limitedPaths = paths.slice(0, 150); 
+                 info += `\n  Defined Endpoints: ${limitedPaths.join(', ')}`;
+                 if (paths.length > 150) info += ` ... (+${paths.length - 150} more)`;
+            }
+            return info;
+        }).join('\n');
+    }
+
+    const context = `${getCommonContext(variablesJson, functions)}${sourceContext}`;
+    const systemInstruction = `You are a REST API expert. The user is building API requests in a client similar to Postman.
+    
+    ${commonInstruction}
+
+    To configure the entire request (method, url, body), output a JSON object wrapped in \`\`\`json\`\`\`:
+    {
+      "method": "POST",
+      "url": "https://api.example.com/resource",
+      "headers": { "Content-Type": "application/json" },
+      "body": { ... }
+    }
+
+    If you only want to set the Body, wrap the JSON body in \`\`\`json\`\`\`.
+    If you only want to set the URL, wrap the URL in \`\`\`text\`\`\`.
+
+    IMPORTANT:
+    - Use the provided "Available API Sources" to construct the URL.
+    - If a source has "Defined Endpoints", you MUST use one of those exact paths. Do not invent paths (e.g. do not add '/v1' or singularize names if not in the list).
+    - Concatenate the Base URL and the Endpoint Path correctly.
+
+    Your goal is to help the user construct URL parameters, headers, or body content.`;
 
     return handleAiAssist(systemInstruction, prompt, context);
 };

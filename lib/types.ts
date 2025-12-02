@@ -5,7 +5,8 @@ export enum EditorType {
   EMAIL_HTML = 'EMAIL_HTML',
   SCRIPT_JS = 'SCRIPT_JS',
   DB_QUERY = 'DB_QUERY',
-  XML_TEMPLATE = 'XML_TEMPLATE'
+  XML_TEMPLATE = 'XML_TEMPLATE',
+  REST_API = 'REST_API'
 }
 
 export type SqlDialect = 'postgres' | 'mysql' | 'mssql' | 'duckdb' | 'seekdb' | 'postgres-vector';
@@ -85,3 +86,62 @@ export interface SqlGroup {
 }
 
 export type SqlLibrary = Record<string, SqlGroup[]>;
+
+// -- REST Editor Definitions --
+export type RestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+
+export interface RestParam {
+  id: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  description?: string;
+}
+
+export interface AuthConfig {
+  type: 'none' | 'basic' | 'bearer' | 'apiKey';
+  username?: string;
+  password?: string;
+  token?: string;
+  apiKeyKey?: string;
+  apiKeyValue?: string;
+  apiKeyIn?: 'header' | 'query';
+}
+
+export interface NamedAuthConfig extends AuthConfig {
+  id: string;
+  name: string;
+}
+
+export interface RestRequest {
+  id: string;
+  name: string;
+  meta?: { origin: 'swagger' | 'custom', sourceId?: string, operationId?: string };
+  method: RestMethod;
+  url: string;
+  pathParams: RestParam[];
+  params: RestParam[];
+  headers: RestParam[];
+  auth: AuthConfig;
+  bodyType: 'none' | 'json' | 'xml' | 'text';
+  body: string;
+}
+
+export interface RestResponse {
+  status: number;
+  statusText: string;
+  time: number;
+  size: number;
+  headers: Record<string, string>;
+  data: string;
+  timestamp: number;
+}
+
+export interface ApiSource {
+  id: string;
+  name: string;
+  baseUrl: string;
+  specUrl?: string;
+  spec?: any;
+  lastFetched: number;
+}

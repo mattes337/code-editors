@@ -165,7 +165,7 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
                         <div className="flex-1 min-h-0 relative">
                              <CodeEditor 
                                 ref={editorRef}
-                                language="html" 
+                                language="handlebars" 
                                 value={content} 
                                 onChange={(val) => onChange(val || '')} 
                             />
