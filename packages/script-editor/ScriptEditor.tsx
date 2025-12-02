@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { UserFunction, EditorType } from '../types';
-import { executeScript } from '../utils';
+import { UserFunction, EditorType } from '../../lib/types';
+import { executeScript } from '../../lib/utils';
 import { Play, RefreshCw, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
-import { TreeView } from '../components/TreeView';
-import { CodeEditor, CodeEditorRef } from '../components/CodeEditor';
-import { ToolsPanel } from '../components/ToolsPanel';
+import { TreeView } from '../shared-ui/TreeView';
+import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
+import { ToolsPanel } from '../shared-ui/ToolsPanel';
 
 interface ScriptEditorProps {
     content: string;

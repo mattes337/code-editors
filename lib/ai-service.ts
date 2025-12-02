@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { UserFunction, DbConnection, HostImage } from "../types";
+import { UserFunction, DbConnection, HostImage } from "./types";
 
 const commonInstruction = `
     IMPORTANT SYNTAX RULES (STRICT HANDLEBARS):

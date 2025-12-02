@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VariableNode, EditorType } from '../types';
+import { VariableNode, EditorType } from '../../lib/types';
 import { ChevronRight, ChevronDown, Braces, Box, Hash, Type, ToggleLeft, List, AlertCircle } from 'lucide-react';
 
 interface Props {

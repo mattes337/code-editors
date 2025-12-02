@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserFunction, EditorType } from '../types';
+import { UserFunction, EditorType } from '../../lib/types';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { FunctionEditorModal } from './FunctionEditorModal';
 

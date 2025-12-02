@@ -5,8 +5,8 @@ import {
   ChevronRight,
   GripVertical
 } from 'lucide-react';
-import { EmailSnippetGroup } from '../types';
-import { DEFAULT_EMAIL_SNIPPET_GROUPS } from '../constants';
+import { EmailSnippetGroup } from '../../lib/types';
+import { DEFAULT_EMAIL_SNIPPET_GROUPS } from '../../lib/constants';
 
 interface EmailToolboxPanelProps {
   snippetGroups?: EmailSnippetGroup[];

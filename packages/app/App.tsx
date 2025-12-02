@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EditorType, UserFunction, DbConnection, HostImage } from './types';
-import { JsonEditor } from './editors/JsonEditor';
-import { HtmlEditor } from './editors/HtmlEditor';
-import { ScriptEditor } from './editors/ScriptNodeEditor';
-import { DbQueryEditor } from './editors/DbQueryEditor';
-import { XmlEditor } from './editors/XmlEditor';
+import { EditorType, UserFunction, DbConnection, HostImage } from '../../lib/types';
+import { JsonEditor } from '../json-editor/JsonEditor';
+import { HtmlEditor } from '../html-editor/HtmlEditor';
+import { ScriptEditor } from '../script-editor/ScriptEditor';
+import { DbQueryEditor } from '../db-query-editor/DbQueryEditor';
+import { XmlEditor } from '../xml-editor/XmlEditor';
 import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode } from 'lucide-react';
-import { DEFAULT_EMAIL_SNIPPET_GROUPS, DEFAULT_SQL_DIALECT_DATA, DEFAULT_XML_SNIPPET_GROUPS } from './constants';
+import { DEFAULT_EMAIL_SNIPPET_GROUPS, DEFAULT_SQL_DIALECT_DATA, DEFAULT_XML_SNIPPET_GROUPS } from '../../lib/constants';
 import {
   DEFAULT_VARIABLES_JSON,
   DEFAULT_JSON_CONTENT,
@@ -17,14 +17,14 @@ import {
   DEFAULT_FUNCTIONS,
   DEFAULT_DB_CONNECTIONS,
   DEFAULT_HOST_IMAGES
-} from './defaults';
+} from '../../lib/defaults';
 import {
   generateJsonAssistResponse,
   generateHtmlAssistResponse,
   generateScriptAssistResponse,
   generateSqlAssistResponse,
   generateXmlAssistResponse
-} from './services/ai-service';
+} from '../../lib/ai-service';
 
 export default function App() {
   // Global Store State

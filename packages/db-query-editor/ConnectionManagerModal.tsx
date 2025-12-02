@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2, Database, Plus, Server, Activity, CheckCircle2, AlertCircle } from 'lucide-react';
-import { DbConnection, SqlDialect } from '../types';
+import { DbConnection, SqlDialect } from '../../lib/types';
 
 interface ConnectionManagerModalProps {
   isOpen: boolean;

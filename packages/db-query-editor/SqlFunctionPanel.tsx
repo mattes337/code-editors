@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { SqlDialect, SqlLibrary } from '../types';
+import { SqlDialect, SqlLibrary } from '../../lib/types';
 import { ChevronDown, ChevronRight, LayoutTemplate, FunctionSquare } from 'lucide-react';
-import { DEFAULT_SQL_DIALECT_DATA, DEFAULT_SQL_COMMON_GROUPS } from '../constants';
+import { DEFAULT_SQL_DIALECT_DATA, DEFAULT_SQL_COMMON_GROUPS } from '../../lib/constants';
 
 interface SqlFunctionPanelProps {
   dialect?: SqlDialect;

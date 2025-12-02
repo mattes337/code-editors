@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { interpolateString } from '../utils';
-import { UserFunction, EditorType } from '../types';
-import { CodeEditor, CodeEditorRef } from '../components/CodeEditor';
-import { ToolsPanel } from '../components/ToolsPanel';
+import { interpolateString } from '../../lib/utils';
+import { UserFunction, EditorType } from '../../lib/types';
+import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
+import { ToolsPanel } from '../shared-ui/ToolsPanel';
 import { PanelRightClose, PanelRightOpen, Wand2 } from 'lucide-react';
 
 interface JsonEditorProps {

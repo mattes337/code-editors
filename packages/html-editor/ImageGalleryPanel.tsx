@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { HostImage } from '../types';
+import { HostImage } from '../../lib/types';
 import { Image as ImageIcon, GripVertical, Plus, Trash2, Link as LinkIcon, Upload, X } from 'lucide-react';
 import { ImageCropperModal } from './ImageCropperModal';
 

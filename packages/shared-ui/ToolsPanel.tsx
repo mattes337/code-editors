@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserFunction, EditorType, SqlDialect, EmailSnippetGroup, SqlLibrary, XmlSnippetGroup, HostImage } from '../types';
+import { UserFunction, EditorType, SqlDialect, EmailSnippetGroup, SqlLibrary, XmlSnippetGroup, HostImage } from '../../lib/types';
 import { Braces, Code2, PanelRightClose, PanelRightOpen, Edit2, AlertTriangle, Plus, Layout, FileCode, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { VariableTree } from './VariableTree';
 import { FunctionPanel } from './FunctionPanel';
-import { SqlFunctionPanel } from './SqlFunctionPanel';
-import { EmailToolboxPanel } from './EmailToolboxPanel';
-import { XmlToolboxPanel } from './XmlToolboxPanel';
-import { ImageGalleryPanel } from './ImageGalleryPanel';
+import { SqlFunctionPanel } from '../db-query-editor/SqlFunctionPanel';
+import { EmailToolboxPanel } from '../html-editor/EmailToolboxPanel';
+import { XmlToolboxPanel } from '../xml-editor/XmlToolboxPanel';
+import { ImageGalleryPanel } from '../html-editor/ImageGalleryPanel';
 import { AiChatPanel, ChatMessage } from './AiChatPanel';
 import { VariablesEditorModal } from './VariablesEditorModal';
 import { FunctionEditorModal } from './FunctionEditorModal';

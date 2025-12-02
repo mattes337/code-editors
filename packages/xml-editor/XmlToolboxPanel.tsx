@@ -5,8 +5,8 @@ import {
   ChevronRight,
   GripVertical
 } from 'lucide-react';
-import { XmlSnippetGroup } from '../types';
-import { DEFAULT_XML_SNIPPET_GROUPS } from '../constants';
+import { XmlSnippetGroup } from '../../lib/types';
+import { DEFAULT_XML_SNIPPET_GROUPS } from '../../lib/constants';
 
 interface XmlToolboxPanelProps {
   snippetGroups?: XmlSnippetGroup[];

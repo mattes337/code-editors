@@ -78,7 +78,7 @@ const registerHelpers = (functions: UserFunction[]) => {
     try {
       // eslint-disable-next-line no-new-func
       const jsFunc = new Function(...func.params, func.body);
-      Handlebars.registerHelper(func.name, jsFunc);
+      Handlebars.registerHelper(func.name, jsFunc as any);
     } catch (e) {
       console.error(`Failed to register helper ${func.name}`, e);
     }

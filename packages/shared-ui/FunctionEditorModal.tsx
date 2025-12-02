@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserFunction } from '../types';
+import { UserFunction } from '../../lib/types';
 import { X, Save, Play, AlertCircle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 

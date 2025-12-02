@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserFunction, DbConnection, EditorType, SqlLibrary } from '../types';
-import { CodeEditor, CodeEditorRef } from '../components/CodeEditor';
-import { ToolsPanel } from '../components/ToolsPanel';
-import { ConnectionManagerModal } from '../components/ConnectionManagerModal';
+import { UserFunction, DbConnection, EditorType, SqlLibrary } from '../../lib/types';
+import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
+import { ToolsPanel } from '../shared-ui/ToolsPanel';
+import { ConnectionManagerModal } from './ConnectionManagerModal';
 import { Settings, Database, Play, Loader2, X, RefreshCw, Wand2 } from 'lucide-react';
-import { interpolateString } from '../utils';
+import { interpolateString } from '../../lib/utils';
 
 interface DbQueryEditorProps {
     content: string;
