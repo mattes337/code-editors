@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { UserFunction, EditorType } from '../../lib/types';
 import { executeScript } from '../../lib/utils';
-import { Play, RefreshCw, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
+import { Play, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, Wand2, RefreshCw } from 'lucide-react';
 import { TreeView } from '../shared-ui/TreeView';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
@@ -11,10 +11,8 @@ interface ScriptEditorProps {
     onChange: (val: string) => void;
     
     // Store Props
-    variables: Record<string, any>;
     variablesJson: string;
     onVariablesChange: (json: string) => void;
-    variableError: string | null;
     functions: UserFunction[];
     onFunctionsChange: (funcs: UserFunction[]) => void;
     
@@ -28,19 +26,26 @@ interface ScriptEditorProps {
 export const ScriptEditor: React.FC<ScriptEditorProps> = ({ 
     content = '', 
     onChange, 
-    variables = {}, 
     variablesJson = '{}',
     onVariablesChange,
-    variableError,
     functions = [],
     onFunctionsChange,
     onUpdateVariables,
     onAiAssist
 }) => {
-    const [executionResult, setExecutionResult] = useState<{ logs: string[], finalContext: any, error?: string } | null>(null);
+    const [executionResult, setExecutionResult] = useState<{ logs: string[], result: any, error?: string } | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isConsoleOpen, setIsConsoleOpen] = useState(true);
     const [isContextOpen, setIsContextOpen] = useState(true);
+
+    // Internal Variable Parsing
+    const variablesObj = useMemo(() => {
+        try {
+            return JSON.parse(variablesJson);
+        } catch {
+            return {};
+        }
+    }, [variablesJson]);
 
     // Editor Ref
     const editorRef = useRef<CodeEditorRef>(null);
@@ -96,7 +101,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     }, [isResizing, stopResizing]);
 
     const runScript = () => {
-        const result = executeScript(content, variables, functions);
+        const result = executeScript(content, variablesObj, functions);
         setExecutionResult(result);
         
         // Ensure sidebar and console are open to see results
@@ -105,11 +110,6 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
         }
         if (!isConsoleOpen && !isContextOpen) {
             setIsConsoleOpen(true);
-        }
-        
-        if (onUpdateVariables && !result.error) {
-            // Optional: Auto-update global variables if passed
-            // onUpdateVariables(result.finalContext); 
         }
     };
 
@@ -223,7 +223,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                                     )}
                                 </div>
 
-                                {/* Final Context State */}
+                                {/* Final Result */}
                                 <div className={`bg-white border border-slate-300 rounded-xl flex flex-col shadow-sm overflow-hidden transition-all duration-300 ${isContextOpen ? 'flex-1 min-h-[150px]' : 'flex-none h-10'}`}>
                                     <div 
                                         className="px-3 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider flex justify-between items-center bg-slate-50 cursor-pointer hover:bg-slate-100 select-none"
@@ -231,15 +231,19 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                                     >
                                         <div className="flex items-center gap-2">
                                             {isContextOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                            <span>Resulting Context</span>
+                                            <span>Result</span>
                                         </div>
                                         <RefreshCw size={12} className="text-slate-400" />
                                     </div>
                                     
                                     {isContextOpen && (
                                         <div className="flex-1 p-3 overflow-y-auto">
-                                            {executionResult?.finalContext ? (
-                                                <TreeView data={executionResult.finalContext} />
+                                            {executionResult ? (
+                                                executionResult.result !== undefined ? (
+                                                    <TreeView data={executionResult.result} label="Output" defaultOpen={true} />
+                                                ) : (
+                                                    <div className="text-slate-400 text-sm italic">Script executed but returned no value (undefined).</div>
+                                                )
                                             ) : (
                                                 <div className="text-slate-400 text-sm italic">Waiting for execution...</div>
                                             )}
@@ -254,10 +258,8 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
 
             {/* Tools Panel */}
             <ToolsPanel 
-                variablesObj={variables}
                 variablesJson={variablesJson}
                 onVariablesChange={onVariablesChange}
-                variableError={variableError}
                 functions={functions}
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.SCRIPT_JS}

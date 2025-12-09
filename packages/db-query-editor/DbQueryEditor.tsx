@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UserFunction, DbConnection, EditorType, SqlLibrary } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
@@ -12,10 +12,8 @@ interface DbQueryEditorProps {
     onChange: (val: string) => void;
     
     // Store Props
-    variables: Record<string, any>;
     variablesJson: string;
     onVariablesChange: (json: string) => void;
-    variableError: string | null;
     functions: UserFunction[];
     onFunctionsChange: (funcs: UserFunction[]) => void;
 
@@ -41,10 +39,8 @@ interface DbQueryEditorProps {
 export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({ 
     content = '', 
     onChange, 
-    variables = {}, 
     variablesJson = '{}',
     onVariablesChange,
-    variableError,
     functions = [],
     onFunctionsChange,
     connections = [],
@@ -61,6 +57,15 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
     const [isManagerOpen, setIsManagerOpen] = useState(false);
     const [interpolatedQuery, setInterpolatedQuery] = useState('');
     const [missingFunctions, setMissingFunctions] = useState<string[]>([]);
+
+    // Internal Variable Parsing
+    const variablesObj = useMemo(() => {
+        try {
+            return JSON.parse(variablesJson);
+        } catch {
+            return {};
+        }
+    }, [variablesJson]);
     
     // Editor Ref
     const editorRef = useRef<CodeEditorRef>(null);
@@ -83,12 +88,12 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
 
     useEffect(() => {
         try {
-            const result = interpolateString(content, variables, functions);
+            const result = interpolateString(content, variablesObj, functions);
             setInterpolatedQuery(result);
         } catch (e: any) {
             setInterpolatedQuery(`Error interpolating variables: ${e.message}`);
         }
-    }, [content, variables, functions]);
+    }, [content, variablesObj, functions]);
 
     const handleExecute = () => {
         if (activeConnection) {
@@ -253,10 +258,8 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
 
             {/* Tools Panel */}
             <ToolsPanel 
-                variablesObj={variables}
                 variablesJson={variablesJson}
                 onVariablesChange={onVariablesChange}
-                variableError={variableError}
                 functions={functions}
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.DB_QUERY}

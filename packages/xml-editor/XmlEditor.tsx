@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { interpolateString } from '../../lib/utils';
 import { UserFunction, EditorType, XmlSnippetGroup } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
@@ -11,10 +11,8 @@ interface XmlEditorProps {
     onChange: (val: string) => void;
     
     // Store Props
-    variables: Record<string, any>;
     variablesJson: string;
     onVariablesChange: (json: string) => void;
-    variableError: string | null;
     functions: UserFunction[];
     onFunctionsChange: (funcs: UserFunction[]) => void;
     
@@ -28,10 +26,8 @@ interface XmlEditorProps {
 export const XmlEditor: React.FC<XmlEditorProps> = ({ 
     content = '', 
     onChange, 
-    variables = {}, 
     variablesJson = '{}',
     onVariablesChange,
-    variableError,
     functions = [],
     onFunctionsChange,
     xmlBlockGroups = DEFAULT_XML_SNIPPET_GROUPS,
@@ -42,6 +38,15 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
     const [isPreviewOpen, setIsPreviewOpen] = useState(true);
     const [missingFunctions, setMissingFunctions] = useState<string[]>([]);
     
+    // Internal Variable Parsing
+    const variablesObj = useMemo(() => {
+        try {
+            return JSON.parse(variablesJson);
+        } catch {
+            return {};
+        }
+    }, [variablesJson]);
+
     // Editor Ref
     const editorRef = useRef<CodeEditorRef>(null);
 
@@ -120,19 +125,19 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
 
     useEffect(() => {
         try {
-            const interpolated = interpolateString(content, variables, functions);
+            const interpolated = interpolateString(content, variablesObj, functions);
             setPreview(interpolated);
             setError(null);
         } catch (e: any) {
             setError(e.message);
             try {
-                const interpolated = interpolateString(content, variables, functions);
+                const interpolated = interpolateString(content, variablesObj, functions);
                 setPreview(interpolated); 
             } catch (handlebarsError: any) {
                 setPreview(`Template Error: ${handlebarsError.message}`);
             }
         }
-    }, [content, variables, functions]);
+    }, [content, variablesObj, functions]);
 
     const handleInsert = (text: string) => {
         if (editorRef.current) {
@@ -218,10 +223,8 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
 
             {/* Tools Panel */}
             <ToolsPanel 
-                variablesObj={variables}
                 variablesJson={variablesJson}
                 onVariablesChange={onVariablesChange}
-                variableError={variableError}
                 functions={functions}
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.XML_TEMPLATE}

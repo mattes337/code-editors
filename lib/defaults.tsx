@@ -117,20 +117,34 @@ export const DEFAULT_HTML_CONTENT = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export const DEFAULT_SCRIPT_CONTENT = `// Access variables via 'ctx'
+export const DEFAULT_SMS_CONTENT = `Hello {{ user.name }},
+
+Your order #{{ order.id }} has been shipped!
+Track it here: https://example.com/track/{{ order.id }}
+
+Reply STOP to unsubscribe.`;
+
+export const DEFAULT_SCRIPT_CONTENT = `// Access variables via 'input'
 // Use 'log(msg)' to print to console
-// User functions are available globally
+// Return a value to see the result
 
 log("Starting script execution...");
-ctx.timestamp = Date.now();
 
-if (ctx.user && ctx.user.id) {
-    const tax = calcTax(100);
-    log("Calculated Tax for user: " + tax);
-    ctx.lastCalculatedTax = tax;
+const orderTotal = input.order ? input.order.total : 0;
+let tax = 0;
+
+if (orderTotal > 0) {
+    tax = calcTax(orderTotal);
+    log("Calculated Tax: " + tax);
 }
 
-log("Script finished.");`;
+// Return the calculated result
+return {
+    originalTotal: orderTotal,
+    taxAmount: tax,
+    grandTotal: Number(orderTotal) + Number(tax),
+    processedAt: new Date().toISOString()
+};`;
 
 export const DEFAULT_SQL_CONTENT = `-- Select orders for the current user
 SELECT 

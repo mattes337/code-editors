@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserFunction, EditorType, SqlDialect, EmailSnippetGroup, SqlLibrary, XmlSnippetGroup, HostImage } from '../../lib/types';
 import { Braces, Code2, PanelRightClose, PanelRightOpen, Edit2, AlertTriangle, Plus, Layout, FileCode, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { VariableTree } from './VariableTree';
@@ -12,10 +12,8 @@ import { VariablesEditorModal } from './VariablesEditorModal';
 import { FunctionEditorModal } from './FunctionEditorModal';
 
 interface ToolsPanelProps {
-  variablesObj: Record<string, any>;
   variablesJson: string;
   onVariablesChange: (json: string) => void;
-  variableError: string | null;
   functions: UserFunction[];
   onFunctionsChange: (funcs: UserFunction[]) => void;
   activeEditorType?: EditorType;
@@ -49,10 +47,8 @@ interface ToolsPanelProps {
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
-  variablesObj = {},
   variablesJson = '{}',
   onVariablesChange,
-  variableError,
   functions = [],
   onFunctionsChange,
   activeEditorType,
@@ -70,7 +66,15 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   runTrigger
 }) => {
   const [activeTab, setActiveTab] = useState<'variables' | 'functions' | 'blocks' | 'images' | 'chat'>('variables');
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  // Initialize collapse state based on screen width
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+      if (typeof window !== 'undefined') {
+          return window.innerWidth < 1024;
+      }
+      return false;
+  });
+
   const [isVariableModalOpen, setIsVariableModalOpen] = useState(false);
   
   // Quick Add Function State
@@ -81,10 +85,44 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
+  // Internal Parsing for Tree View
+  const variablesObj = useMemo(() => {
+    try {
+        return JSON.parse(variablesJson);
+    } catch {
+        return {};
+    }
+  }, [variablesJson]);
+
+  const variableError = useMemo(() => {
+    try {
+        JSON.parse(variablesJson);
+        return null;
+    } catch (e: any) {
+        return e.message;
+    }
+  }, [variablesJson]);
+
   // Constants for modes
   const isSqlMode = activeEditorType === EditorType.DB_QUERY;
   const isHtmlMode = activeEditorType === EditorType.EMAIL_HTML;
   const isXmlMode = activeEditorType === EditorType.XML_TEMPLATE;
+
+  // Auto-collapse on resize when crossing threshold
+  useEffect(() => {
+    let prevWidth = window.innerWidth;
+    const handleResize = () => {
+      const currWidth = window.innerWidth;
+      // If crossing the 1024px threshold downwards, auto-collapse
+      if (prevWidth >= 1024 && currWidth < 1024) {
+        setIsCollapsed(true);
+      }
+      prevWidth = currWidth;
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Auto-switch to functions tab if missing functions detected
   useEffect(() => {

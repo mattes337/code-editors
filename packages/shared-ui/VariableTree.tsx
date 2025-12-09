@@ -52,7 +52,7 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType; onInsert
 
   const getInsertText = () => {
     if (editorType === EditorType.SCRIPT_JS) {
-        return `ctx.${node.path}`;
+        return `input.${node.path}`;
     } else {
         return `{{ ${node.path} }}`;
     }

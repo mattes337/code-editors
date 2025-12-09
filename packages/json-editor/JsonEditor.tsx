@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { interpolateString } from '../../lib/utils';
 import { UserFunction, EditorType } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
@@ -10,10 +10,8 @@ interface JsonEditorProps {
     onChange: (val: string) => void;
     
     // Store Props
-    variables: Record<string, any>;
     variablesJson: string;
     onVariablesChange: (json: string) => void;
-    variableError: string | null;
     functions: UserFunction[];
     onFunctionsChange: (funcs: UserFunction[]) => void;
     
@@ -24,10 +22,8 @@ interface JsonEditorProps {
 export const JsonEditor: React.FC<JsonEditorProps> = ({ 
     content = '', 
     onChange, 
-    variables = {}, 
     variablesJson = '{}',
     onVariablesChange,
-    variableError,
     functions = [],
     onFunctionsChange,
     onAiAssist
@@ -37,6 +33,15 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
     const [isPreviewOpen, setIsPreviewOpen] = useState(true);
     const [missingFunctions, setMissingFunctions] = useState<string[]>([]);
     
+    // Internal Variable Parsing
+    const variablesObj = useMemo(() => {
+        try {
+            return JSON.parse(variablesJson);
+        } catch {
+            return {};
+        }
+    }, [variablesJson]);
+
     // Editor Ref
     const editorRef = useRef<CodeEditorRef>(null);
 
@@ -115,20 +120,20 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
 
     useEffect(() => {
         try {
-            const interpolated = interpolateString(content, variables, functions);
+            const interpolated = interpolateString(content, variablesObj, functions);
             const parsed = JSON.parse(interpolated);
             setPreview(JSON.stringify(parsed, null, 2));
             setError(null);
         } catch (e: any) {
             setError(e.message);
             try {
-                const interpolated = interpolateString(content, variables, functions);
+                const interpolated = interpolateString(content, variablesObj, functions);
                 setPreview(interpolated); 
             } catch (handlebarsError: any) {
                 setPreview(`Template Error: ${handlebarsError.message}`);
             }
         }
-    }, [content, variables, functions]);
+    }, [content, variablesObj, functions]);
 
     const handleInsert = (text: string) => {
         if (editorRef.current) {
@@ -214,10 +219,8 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({
 
             {/* Tools Panel */}
             <ToolsPanel 
-                variablesObj={variables}
                 variablesJson={variablesJson}
                 onVariablesChange={onVariablesChange}
-                variableError={variableError}
                 functions={functions}
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.JSON_REST}

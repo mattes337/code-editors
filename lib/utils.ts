@@ -119,12 +119,12 @@ export const interpolateString = (template: string, context: Record<string, any>
 // Execute a single script string
 export const executeScript = (
   code: string, 
-  context: Record<string, any>,
+  input: Record<string, any>,
   functions: UserFunction[]
-): { logs: string[], finalContext: Record<string, any>, error?: string } => {
+): { logs: string[], result: any, error?: string } => {
   
   const logs: string[] = [];
-  const runningContext = JSON.parse(JSON.stringify(context));
+  const inputData = JSON.parse(JSON.stringify(input));
 
   // Build function declarations string
   const funcDecls = functions.map(f => {
@@ -138,7 +138,7 @@ export const executeScript = (
   try {
     // Create a function that wraps the user code with access to context and helper functions
     const runCode = new Function(
-      'ctx', 
+      'input', 
       'log',
       `
       "use strict";
@@ -150,10 +150,9 @@ export const executeScript = (
       `
     );
 
-    runCode(runningContext, logFn);
+    const result = runCode(inputData, logFn);
+    return { logs, result };
   } catch (e: any) {
-    return { logs, finalContext: runningContext, error: e.message };
+    return { logs, result: undefined, error: e.message };
   }
-
-  return { logs, finalContext: runningContext };
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Play, Plus, Clock, Download, 
   ChevronRight, ChevronDown, MoreVertical, 
@@ -14,10 +14,8 @@ import { interpolateString } from '../../lib/utils';
 import { AuthManagerModal } from './AuthManagerModal';
 
 interface RestEditorProps {
-  variables: Record<string, any>;
   variablesJson: string;
   onVariablesChange: (json: string) => void;
-  variableError: string | null;
   functions: UserFunction[];
   onFunctionsChange: (funcs: UserFunction[]) => void;
   authCredentials: NamedAuthConfig[];
@@ -221,10 +219,8 @@ const parseOpenApiPaths = (spec: any): any[] => {
 };
 
 export const RestEditor: React.FC<RestEditorProps> = ({
-  variables = {},
   variablesJson = '{}',
   onVariablesChange,
-  variableError,
   functions = [],
   onFunctionsChange,
   authCredentials = [],
@@ -239,6 +235,15 @@ export const RestEditor: React.FC<RestEditorProps> = ({
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
 
   const fetchedSources = useRef<Set<string>>(new Set());
+
+  // Internal Variable Parsing
+  const variablesObj = useMemo(() => {
+    try {
+        return JSON.parse(variablesJson);
+    } catch {
+        return {};
+    }
+  }, [variablesJson]);
 
   // --- Request State ---
   const [requests, setRequests] = useState<RestRequest[]>([DEFAULT_REQUEST]);
@@ -507,14 +512,14 @@ export const RestEditor: React.FC<RestEditorProps> = ({
 
     try {
         // Interpolate URL and Body
-        const interpolatedUrl = interpolateString(activeRequest.url, variables, functions);
-        const interpolatedBody = activeRequest.body ? interpolateString(activeRequest.body, variables, functions) : undefined;
+        const interpolatedUrl = interpolateString(activeRequest.url, variablesObj, functions);
+        const interpolatedBody = activeRequest.body ? interpolateString(activeRequest.body, variablesObj, functions) : undefined;
         
         // Build URL with Query Params
         const urlObj = new URL(interpolatedUrl);
         activeRequest.params.forEach(p => {
             if (p.enabled && p.key) {
-                const val = interpolateString(p.value, variables, functions);
+                const val = interpolateString(p.value, variablesObj, functions);
                 urlObj.searchParams.append(p.key, val);
             }
         });
@@ -523,7 +528,7 @@ export const RestEditor: React.FC<RestEditorProps> = ({
         let finalUrl = urlObj.toString();
         activeRequest.pathParams.forEach(p => {
              if (p.enabled && p.key) {
-                 const val = interpolateString(p.value, variables, functions);
+                 const val = interpolateString(p.value, variablesObj, functions);
                  finalUrl = finalUrl.replace(`{${p.key}}`, val);
              }
         });
@@ -532,22 +537,22 @@ export const RestEditor: React.FC<RestEditorProps> = ({
         const headers: Record<string, string> = {};
         activeRequest.headers.forEach(h => {
             if (h.enabled && h.key) {
-                headers[h.key] = interpolateString(h.value, variables, functions);
+                headers[h.key] = interpolateString(h.value, variablesObj, functions);
             }
         });
 
         // Auth
         if (activeRequest.auth.type === 'basic') {
-            const user = interpolateString(activeRequest.auth.username || '', variables, functions);
-            const pass = interpolateString(activeRequest.auth.password || '', variables, functions);
+            const user = interpolateString(activeRequest.auth.username || '', variablesObj, functions);
+            const pass = interpolateString(activeRequest.auth.password || '', variablesObj, functions);
             const b64 = btoa(`${user}:${pass}`);
             headers['Authorization'] = `Basic ${b64}`;
         } else if (activeRequest.auth.type === 'bearer') {
-            const token = interpolateString(activeRequest.auth.token || '', variables, functions);
+            const token = interpolateString(activeRequest.auth.token || '', variablesObj, functions);
             headers['Authorization'] = `Bearer ${token}`;
         } else if (activeRequest.auth.type === 'apiKey') {
             const key = activeRequest.auth.apiKeyKey || '';
-            const val = interpolateString(activeRequest.auth.apiKeyValue || '', variables, functions);
+            const val = interpolateString(activeRequest.auth.apiKeyValue || '', variablesObj, functions);
             if (activeRequest.auth.apiKeyIn === 'header') {
                 headers[key] = val;
             } else {
@@ -1056,10 +1061,8 @@ export const RestEditor: React.FC<RestEditorProps> = ({
        </div>
 
        <ToolsPanel 
-            variablesObj={variables}
             variablesJson={variablesJson}
             onVariablesChange={onVariablesChange}
-            variableError={variableError}
             functions={functions}
             onFunctionsChange={onFunctionsChange}
             activeEditorType={EditorType.REST_API}

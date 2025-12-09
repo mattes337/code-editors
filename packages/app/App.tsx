@@ -2,19 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { EditorType, UserFunction, DbConnection, HostImage, NamedAuthConfig, ApiSource, AgentConfig } from '../../lib/types';
 import { JsonEditor } from '../json-editor/JsonEditor';
 import { YamlEditor } from '../yaml-editor/YamlEditor';
+import { EmailEditor } from '../email-editor/EmailEditor';
 import { HtmlEditor } from '../html-editor/HtmlEditor';
+import { SmsEditor } from '../sms-editor/SmsEditor';
 import { ScriptEditor } from '../script-editor/ScriptEditor';
 import { DbQueryEditor } from '../db-query-editor/DbQueryEditor';
 import { XmlEditor } from '../xml-editor/XmlEditor';
 import { RestEditor } from '../rest-editor/RestEditor';
 import { AgentEditor } from '../agent-editor/AgentEditor';
-import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode, Globe, Bot, FileText } from 'lucide-react';
+import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode, Globe, Bot, FileText, MessageSquare, PanelTop } from 'lucide-react';
 import { DEFAULT_EMAIL_SNIPPET_GROUPS, DEFAULT_SQL_DIALECT_DATA, DEFAULT_XML_SNIPPET_GROUPS } from '../../lib/constants';
 import {
   DEFAULT_VARIABLES_JSON,
   DEFAULT_JSON_CONTENT,
   DEFAULT_YAML_CONTENT,
   DEFAULT_HTML_CONTENT,
+  DEFAULT_SMS_CONTENT,
   DEFAULT_SCRIPT_CONTENT,
   DEFAULT_SQL_CONTENT,
   DEFAULT_XML_CONTENT,
@@ -27,6 +30,7 @@ import {
   generateJsonAssistResponse,
   generateYamlAssistResponse,
   generateHtmlAssistResponse,
+  generateSmsAssistResponse,
   generateScriptAssistResponse,
   generateSqlAssistResponse,
   generateXmlAssistResponse,
@@ -42,7 +46,9 @@ export default function App() {
   // Content State
   const [jsonContent, setJsonContent] = useState(DEFAULT_JSON_CONTENT);
   const [yamlContent, setYamlContent] = useState(DEFAULT_YAML_CONTENT);
-  const [htmlContent, setHtmlContent] = useState(DEFAULT_HTML_CONTENT);
+  const [emailContent, setEmailContent] = useState(DEFAULT_HTML_CONTENT);
+  const [htmlPageContent, setHtmlPageContent] = useState(DEFAULT_HTML_CONTENT);
+  const [smsContent, setSmsContent] = useState(DEFAULT_SMS_CONTENT);
   const [scriptContent, setScriptContent] = useState(DEFAULT_SCRIPT_CONTENT);
   const [sqlContent, setSqlContent] = useState(DEFAULT_SQL_CONTENT);
   const [xmlContent, setXmlContent] = useState(DEFAULT_XML_CONTENT);
@@ -55,16 +61,6 @@ export default function App() {
 
   // Context State
   const [variablesJson, setVariablesJson] = useState<string>(DEFAULT_VARIABLES_JSON);
-  // Initialize lazily to ensure data is available on first render
-  const [variablesObj, setVariablesObj] = useState<Record<string, any>>(() => {
-    try {
-        return JSON.parse(DEFAULT_VARIABLES_JSON);
-    } catch {
-        return {};
-    }
-  });
-  const [variableError, setVariableError] = useState<string | null>(null);
-  
   const [functions, setFunctions] = useState<UserFunction[]>(DEFAULT_FUNCTIONS);
 
   // Image State
@@ -91,26 +87,21 @@ export default function App() {
     }
   ]);
 
-  // Parse variables JSON whenever it changes (updates from user input)
-  useEffect(() => {
-    try {
-      const parsed = JSON.parse(variablesJson);
-      setVariablesObj(parsed);
-      setVariableError(null);
-    } catch (e) {
-      setVariableError((e as Error).message);
-    }
-  }, [variablesJson]);
-
   const handleExecuteQuery = (query: string, connection: DbConnection) => {
       setIsDbExecuting(true);
       setDbExecutionResult(null);
 
       // Simulate network delay
       executionTimeoutRef.current = window.setTimeout(() => {
+        let userId = 'u_unknown';
+        try {
+            const parsed = JSON.parse(variablesJson);
+            if (parsed.user?.id) userId = parsed.user.id;
+        } catch {}
+
         const mockData = Array.from({ length: 5 }).map((_, i) => ({
             id: i + 1,
-            user_id: variablesObj.user?.id || 'u_unknown',
+            user_id: userId,
             order_total: (Math.random() * 1000).toFixed(2),
             status: 'completed',
             created_at: new Date(Date.now() - Math.random() * 10000000000).toISOString()
@@ -132,13 +123,6 @@ export default function App() {
 
   // Agent Execution
   const handleRunAgent = () => {
-      // Trigger execution via the chat panel inside the Agent Editor
-      // We do this by updating a trigger state which the AgentEditor listens to
-      // and then it triggers the AI Assist flow which acts as the "Run"
-      // Note: The actual execution logic is inside the `runAgentSimulation` which is called
-      // by the chat panel when we provide a specific "Run Prompt" to onAiAssist.
-      
-      // Since `runAgentSimulation` requires `userMessage`, we trigger the UI to send it.
       setExternalRunTrigger({ 
           message: agentConfig.userMessageInput, 
           timestamp: Date.now() 
@@ -173,9 +157,17 @@ export default function App() {
     return generateYamlAssistResponse(prompt, yamlContent, variablesJson, functions);
   };
 
-  const handleHtmlAssist = async (prompt: string): Promise<string> => {
-    // Pass the current state of hostImages, not the default
-    return generateHtmlAssistResponse(prompt, htmlContent, variablesJson, functions, hostImages);
+  const handleEmailAssist = async (prompt: string): Promise<string> => {
+    return generateHtmlAssistResponse(prompt, emailContent, variablesJson, functions, hostImages);
+  };
+
+  const handleHtmlPageAssist = async (prompt: string): Promise<string> => {
+    // Reusing HTML generator for generic pages, though prompt tuning could differ
+    return generateHtmlAssistResponse(prompt, htmlPageContent, variablesJson, functions, hostImages);
+  };
+
+  const handleSmsAssist = async (prompt: string): Promise<string> => {
+    return generateSmsAssistResponse(prompt, smsContent, variablesJson, functions);
   };
 
   const handleScriptAssist = async (prompt: string): Promise<string> => {
@@ -196,36 +188,10 @@ export default function App() {
   };
 
   const handleAgentAssist = async (prompt: string): Promise<string> => {
-      // If the prompt matches the user input template (triggered via Run button), run the simulation
-      // Otherwise, assume it's a configuration assistance request
-      
-      // Heuristic: If prompt is long or matches our run trigger, treat as execution
-      // But cleaner: AgentEditor handles the distinction. 
-      // The ToolsPanel calls this. If it was triggered by `runTrigger`, it's an execution.
-      
-      // Check if this prompt looks like an execution request (e.g. populated template)
-      // Since we don't have easy flag here, we'll try to run simulation if the prompt is NOT a question.
-      // Actually, let's just assume `runAgentSimulation` handles the "User Input" and `generateAgentAssistResponse` handles "Help me configure".
-      
-      // Dual-mode handler:
-      // 1. If triggered by RUN button -> It sends the USER MESSAGE -> We simulate agent response.
-      // 2. If typed in chat -> It is a question -> We help configure.
-      
-      // Simple heuristic: If prompt starts with "Help" or "How" or "Generate", likely config help.
-      // If prompt looks like data/message, likely execution.
-      // Better yet: We will assume everything sent to this handler is for SIMULATION if `externalRunTrigger` was recently set.
-      // But `externalRunTrigger` is reset? No.
-      
-      // Let's rely on the prompt content.
-      // If it matches `agentConfig.userMessageInput` (raw or interpolated), it's likely a run.
-      // BUT `runAgentSimulation` is actually what we want when "Run" is clicked.
-      
-      // For now, let's try to run simulation.
       setIsAgentRunning(true);
       try {
-          // We can try to use a specific prefix if we want to differentiate?
-          // No, let's just use `runAgentSimulation` for the "Chat" in Agent Editor, 
-          // essentially making the chat window the "Test Console".
+          let variablesObj = {};
+          try { variablesObj = JSON.parse(variablesJson); } catch {}
           return await runAgentSimulation(agentConfig, prompt, variablesObj, functions);
       } finally {
           setIsAgentRunning(false);
@@ -234,10 +200,8 @@ export default function App() {
 
   // Common props for all editors
   const commonProps = {
-    variables: variablesObj,
     variablesJson,
     onVariablesChange: setVariablesJson,
-    variableError,
     functions,
     onFunctionsChange: setFunctions
   };
@@ -264,14 +228,37 @@ export default function App() {
         );
       case EditorType.EMAIL_HTML:
         return (
-          <HtmlEditor 
-            content={htmlContent}
-            onChange={setHtmlContent}
+          <EmailEditor 
+            content={emailContent}
+            onChange={setEmailContent}
             emailBlockGroups={DEFAULT_EMAIL_SNIPPET_GROUPS}
             hostImages={hostImages}
             onAddImage={handleAddImage}
             onDeleteImage={handleDeleteImage}
-            onAiAssist={handleHtmlAssist}
+            connections={dbConnections}
+            onAiAssist={handleEmailAssist}
+            {...commonProps}
+          />
+        );
+      case EditorType.HTML_PAGE:
+        return (
+          <HtmlEditor 
+            content={htmlPageContent}
+            onChange={setHtmlPageContent}
+            hostImages={hostImages}
+            onAddImage={handleAddImage}
+            onDeleteImage={handleDeleteImage}
+            onAiAssist={handleHtmlPageAssist}
+            {...commonProps}
+          />
+        );
+      case EditorType.SMS_MSG:
+        return (
+          <SmsEditor 
+            content={smsContent}
+            onChange={setSmsContent}
+            connections={dbConnections}
+            onAiAssist={handleSmsAssist}
             {...commonProps}
           />
         );
@@ -331,7 +318,7 @@ export default function App() {
                 onAiAssist={handleAgentAssist}
                 onRun={handleRunAgent}
                 isRunning={isAgentRunning}
-                runError={agentRunResult} // We re-purpose this or add new state
+                runError={agentRunResult}
                 externalRunTrigger={externalRunTrigger}
                 {...commonProps}
             />
@@ -354,7 +341,7 @@ export default function App() {
           </div>
 
           {/* Navigation Pills */}
-          <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
+          <div className="flex p-1 bg-slate-100 rounded-lg gap-1 overflow-x-auto">
              <NavPill 
                active={activeEditor === EditorType.JSON_REST}
                onClick={() => setActiveEditor(EditorType.JSON_REST)}
@@ -377,7 +364,19 @@ export default function App() {
                active={activeEditor === EditorType.EMAIL_HTML}
                onClick={() => setActiveEditor(EditorType.EMAIL_HTML)}
                icon={<Mail size={16} />}
-               label="HTML Email"
+               label="Email"
+             />
+             <NavPill 
+               active={activeEditor === EditorType.HTML_PAGE}
+               onClick={() => setActiveEditor(EditorType.HTML_PAGE)}
+               icon={<PanelTop size={16} />}
+               label="HTML"
+             />
+             <NavPill 
+               active={activeEditor === EditorType.SMS_MSG}
+               onClick={() => setActiveEditor(EditorType.SMS_MSG)}
+               icon={<MessageSquare size={16} />}
+               label="SMS"
              />
              <NavPill 
                active={activeEditor === EditorType.XML_TEMPLATE}
@@ -428,7 +427,7 @@ export default function App() {
 const NavPill = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
     <button
         onClick={onClick}
-        className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200
+        className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap
             ${active 
                 ? 'bg-white text-teal-700 shadow-sm ring-1 ring-slate-200' 
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'

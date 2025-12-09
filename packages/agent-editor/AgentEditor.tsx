@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { AgentConfig, UserFunction, EditorType } from '../../lib/types';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
 import { interpolateString } from '../../lib/utils';
@@ -15,14 +15,12 @@ import { AgentCapabilitiesPanel } from './components/AgentCapabilitiesPanel';
 interface AgentEditorProps {
     // Data
     config: AgentConfig;
-    variables: Record<string, any>;
     variablesJson: string;
-    variableError: string | null;
+    onVariablesChange: (json: string) => void;
     functions: UserFunction[];
 
     // Callbacks
     onChange: (config: AgentConfig) => void;
-    onVariablesChange: (json: string) => void;
     onFunctionsChange: (funcs: UserFunction[]) => void;
     
     // Services
@@ -38,10 +36,8 @@ interface AgentEditorProps {
 export const AgentEditor: React.FC<AgentEditorProps> = ({ 
     config, 
     onChange, 
-    variables = {}, 
     variablesJson = '{}', 
     onVariablesChange, 
-    variableError,
     functions = [],
     onFunctionsChange,
     onAiAssist,
@@ -53,6 +49,15 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
     // Local State for Run Trigger interpolation
     const [processedRunTrigger, setProcessedRunTrigger] = useState<{message: string, timestamp: number} | null>(null);
 
+    // Internal Variable Parsing
+    const variablesObj = useMemo(() => {
+        try {
+            return JSON.parse(variablesJson);
+        } catch {
+            return {};
+        }
+    }, [variablesJson]);
+
     // Update generic config key
     const updateConfig = useCallback((key: keyof AgentConfig, value: any) => {
         onChange({ ...config, [key]: value });
@@ -63,7 +68,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
         if (externalRunTrigger) {
             try {
                 // Interpolate before sending to chat panel
-                const interpolated = interpolateString(config.userMessageInput, variables, functions);
+                const interpolated = interpolateString(config.userMessageInput, variablesObj, functions);
                 setProcessedRunTrigger({ 
                     message: interpolated, 
                     timestamp: externalRunTrigger.timestamp 
@@ -76,7 +81,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
                 });
             }
         }
-    }, [externalRunTrigger, config.userMessageInput, variables, functions]);
+    }, [externalRunTrigger, config.userMessageInput, variablesObj, functions]);
 
     return (
         <div className="flex h-full w-full relative">
@@ -140,7 +145,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
                     <AgentPromptPanel 
                         config={config} 
                         onChange={onChange} 
-                        variables={variables}
+                        variables={variablesObj}
                         functions={functions}
                     />
 
@@ -160,10 +165,8 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
 
             {/* Right: Tools & Assistant */}
             <ToolsPanel 
-                variablesObj={variables}
                 variablesJson={variablesJson}
                 onVariablesChange={onVariablesChange}
-                variableError={variableError}
                 functions={functions}
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.AGENT}

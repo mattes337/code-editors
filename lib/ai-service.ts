@@ -89,10 +89,25 @@ export const generateHtmlAssistResponse = async (prompt: string, content: string
     return handleAiAssist(systemInstruction, prompt, context);
 };
 
+export const generateSmsAssistResponse = async (prompt: string, content: string, variablesJson: string, functions: UserFunction[]) => {
+    const context = `Current Content:\n${content}\n\n${getCommonContext(variablesJson, functions)}`;
+    const systemInstruction = `You are an SMS marketing expert. The user is writing an SMS message using Handlebars syntax.
+    
+    ${commonInstruction}
+    
+    Your goal is to help the user write concise, effective SMS messages.
+    Keep messages short (under 160 chars is ideal, but concatenated is fine).
+    Avoid complex HTML.
+    ALWAYS wrap your code in a markdown code block (e.g. \`\`\`text ... \`\`\`).`;
+
+    return handleAiAssist(systemInstruction, prompt, context);
+};
+
 export const generateScriptAssistResponse = async (prompt: string, content: string, variablesJson: string, functions: UserFunction[]) => {
     const context = `Current Content:\n${content}\n\n${getCommonContext(variablesJson, functions)}`;
-    const systemInstruction = `You are a JavaScript expert. The user is writing a script to manipulate the context variables.
-    The script has access to 'ctx' (the variables object) and a 'log' function.
+    const systemInstruction = `You are a JavaScript expert. The user is writing a script to transform data.
+    The script has access to 'input' (the variables object) and a 'log' function.
+    The script MUST return a value (object, array, or primitive) which will be the result.
     
     Your goal is to help the user write logic to transform data.
     If providing code, provide valid JavaScript code that fits within the script environment.
@@ -211,7 +226,7 @@ export const generateRestAssistResponse = async (prompt: string, variablesJson: 
     - The tool output contains the 'baseUrl'. You MUST prepend this to the path to form the full URL.
     - Do not guess paths. If you are unsure, search for the tag that seems most relevant.
     - Concatenate the Base URL and the Endpoint Path correctly.
-    - If the tool returns definitions/components, use them to resolve schema references for body generation.
+    - If the tool returns definitions/components to resolve refs, use them.
 
     Your goal is to help the user construct URL parameters, headers, or body content.`;
 
@@ -345,7 +360,6 @@ export const runAgentSimulation = async (
 
         // 2. Prepare Tools (Function Declarations) - Only for connected tools
         // Note: MCP tools would be handled here in a real implementation
-        // For simulation, we just list them roughly
         /* 
         const tools = config.connectedTools
             .map(id => functions.find(f => f.id === id))
