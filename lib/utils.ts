@@ -219,6 +219,12 @@ export const insertIntoNativeInput = (el: Element | null, text: string): boolean
   if (!el) return false;
   
   if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+    // Fix for Monaco Editor: Do not treat its hidden input area as a standard input
+    // Modifying this textarea corrupts Monaco's internal buffer logic
+    if (el.classList.contains('inputarea')) {
+        return false;
+    }
+
     const input = el as HTMLInputElement | HTMLTextAreaElement;
     const start = input.selectionStart || 0;
     const end = input.selectionEnd || 0;

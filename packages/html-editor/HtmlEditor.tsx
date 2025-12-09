@@ -140,11 +140,13 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     }, [content, variablesObj, functions, hostImages]);
 
     const handleInsert = (text: string) => {
-        if (insertIntoNativeInput(document.activeElement, text)) return;
-
+        // Prioritize Monaco Editor if it has focus
         if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
+            return;
         }
+        
+        insertIntoNativeInput(document.activeElement, text);
     };
 
     return (

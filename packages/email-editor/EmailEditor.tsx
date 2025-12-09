@@ -188,11 +188,13 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
     }, [html, variablesObj, functions, hostImages, meta]);
 
     const handleInsert = (text: string) => {
-        if (insertIntoNativeInput(document.activeElement, text)) return;
-
+        // Prioritize Monaco Editor if it has focus
         if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
+            return;
         }
+
+        insertIntoNativeInput(document.activeElement, text);
     };
 
     const updateMeta = (key: keyof EmailMeta, val: string) => {
