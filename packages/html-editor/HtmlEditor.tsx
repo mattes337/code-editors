@@ -140,13 +140,11 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     }, [content, variablesObj, functions, hostImages]);
 
     const handleInsert = (text: string) => {
-        // Prioritize the main editor insertion if it has focus
+        if (insertIntoNativeInput(document.activeElement, text)) return;
+
         if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
-            return;
         }
-        // Fallback to native input (e.g. sidebar inputs)
-        insertIntoNativeInput(document.activeElement, text);
     };
 
     return (

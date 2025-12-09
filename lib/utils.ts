@@ -218,10 +218,6 @@ export const executeScript = (
 export const insertIntoNativeInput = (el: Element | null, text: string): boolean => {
   if (!el) return false;
   
-  // Guard clause: Do not attempt to insert into Monaco Editor's hidden textareas
-  // Monaco uses these for input capture, and modifying them directly corrupts the editor state
-  if (el.closest('.monaco-editor') || el.classList.contains('inputarea')) return false;
-
   if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
     const input = el as HTMLInputElement | HTMLTextAreaElement;
     const start = input.selectionStart || 0;
