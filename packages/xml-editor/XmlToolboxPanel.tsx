@@ -69,6 +69,7 @@ export const XmlToolboxPanel: React.FC<XmlToolboxPanelProps> = ({
                     draggable
                     onDragStart={(e) => handleDragStart(e, snippet.content)}
                     onClick={() => handleClick(snippet.content)}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="group flex items-center gap-3 p-2 bg-white rounded border border-slate-200 hover:border-teal-400 hover:shadow-sm cursor-pointer active:cursor-grabbing transition-all select-none"
                     title={snippet.description}
                   >

@@ -53,9 +53,34 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType; onInsert
   const getInsertText = () => {
     if (editorType === EditorType.SCRIPT_JS) {
         return `input.${node.path}`;
-    } else {
-        return `{{ ${node.path} }}`;
+    } 
+    
+    // For structured types, use format-specific dump helpers
+    if (node.type === 'object' || node.type === 'array') {
+        switch (editorType) {
+            case EditorType.JSON_REST:
+            case EditorType.REST_API:
+            case EditorType.AGENT:
+                return `{{ toJsonString ${node.path} }}`;
+            
+            case EditorType.YAML_CONFIG:
+                return `{{ toYamlString ${node.path} }}`;
+            
+            case EditorType.EMAIL_HTML:
+            case EditorType.HTML_PAGE:
+                return `{{ toHtmlDump ${node.path} }}`;
+            
+            case EditorType.XML_TEMPLATE:
+                return `{{ toXmlString ${node.path} }}`;
+            
+            default:
+                // Fallback for SQL/SMS etc. JSON string is usually the most useful debug representation
+                return `{{ toJsonString ${node.path} }}`;
+        }
     }
+
+    // Primitives
+    return `{{ ${node.path} }}`;
   };
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -78,6 +103,7 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType; onInsert
         draggable
         onDragStart={handleDragStart}
         onClick={handleClick}
+        onMouseDown={(e) => e.preventDefault()}
         title={`Click or drag to insert: ${getInsertText()}`}
       >
         <div 
@@ -85,6 +111,7 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType; onInsert
              e.stopPropagation();
              setIsOpen(!isOpen);
           }}
+          onMouseDown={(e) => e.stopPropagation()}
           className={`p-0.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-200 ${!isExpandable ? 'invisible' : ''}`}
         >
           {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

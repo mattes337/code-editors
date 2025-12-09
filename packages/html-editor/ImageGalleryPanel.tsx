@@ -165,6 +165,7 @@ export const ImageGalleryPanel: React.FC<ImageGalleryPanelProps> = ({
                     draggable
                     onDragStart={(e) => handleDragStart(e, img)}
                     onClick={() => handleClick(img)}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="group relative bg-white rounded-lg border border-slate-200 hover:border-teal-400 hover:shadow-sm cursor-pointer active:cursor-grabbing transition-all overflow-hidden flex flex-col"
                     title={img.name}
                 >
@@ -175,6 +176,7 @@ export const ImageGalleryPanel: React.FC<ImageGalleryPanelProps> = ({
                         <div className="text-xs font-medium text-slate-700 truncate max-w-[80px]">{img.name}</div>
                         <button 
                             onClick={(e) => { e.stopPropagation(); onDeleteImage(img.id); }}
+                            onMouseDown={(e) => e.stopPropagation()}
                             className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                             title="Delete Image"
                         >

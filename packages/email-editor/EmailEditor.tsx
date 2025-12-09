@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { interpolateString } from '../../lib/utils';
+import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { UserFunction, EditorType, EmailSnippetGroup, HostImage, DbConnection, EmailMessageState, EmailMeta } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
@@ -188,9 +188,13 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
     }, [html, variablesObj, functions, hostImages, meta]);
 
     const handleInsert = (text: string) => {
-        if (editorRef.current) {
+        // Prioritize the main editor insertion if it has focus
+        if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
+            return;
         }
+        // Fallback to native input (e.g. sidebar inputs)
+        insertIntoNativeInput(document.activeElement, text);
     };
 
     const updateMeta = (key: keyof EmailMeta, val: string) => {
@@ -240,175 +244,4 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                     {!isMetaCollapsed && (
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 pb-4 animate-in slide-in-from-top-2">
                              <div className="col-span-2 lg:col-span-1">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">From (Sender)</label>
-                                <input 
-                                    className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20"
-                                    value={meta.from}
-                                    onChange={e => updateMeta('from', e.target.value)}
-                                    placeholder="sender@example.com"
-                                />
-                             </div>
-                             <div className="col-span-2 lg:col-span-1">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">To (Recipient)</label>
-                                <input 
-                                    className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 font-mono text-slate-600"
-                                    value={meta.to}
-                                    onChange={e => updateMeta('to', e.target.value)}
-                                />
-                             </div>
-
-                             <div className="col-span-2">
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Subject</label>
-                                <input 
-                                    className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20"
-                                    value={meta.subject}
-                                    onChange={e => updateMeta('subject', e.target.value)}
-                                    placeholder="Email Subject Line"
-                                />
-                             </div>
-
-                            <div className="col-span-2 lg:col-span-4 flex gap-4">
-                                <div className="flex-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">CC</label>
-                                    <input 
-                                        className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20"
-                                        value={meta.cc}
-                                        onChange={e => updateMeta('cc', e.target.value)}
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">BCC</label>
-                                    <input 
-                                        className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20"
-                                        value={meta.bcc}
-                                        onChange={e => updateMeta('bcc', e.target.value)}
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Reply-To</label>
-                                    <input 
-                                        className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20"
-                                        value={meta.replyTo}
-                                        onChange={e => updateMeta('replyTo', e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className={`flex-1 flex ${isStacked ? 'flex-col' : 'flex-row'} gap-0 min-h-0 relative`}>
-                     {/* Source Editor */}
-                     <div className={`flex-1 flex flex-col min-h-0 p-4 min-w-0`}>
-                        <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider flex justify-between items-center h-6">
-                            <span>HTML Template</span>
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={() => editorRef.current?.format()}
-                                    className="text-slate-400 hover:text-teal-600 hover:bg-teal-50 p-0.5 rounded transition-colors"
-                                    title="Format Code (Ctrl+F)"
-                                >
-                                    <Wand2 size={14} />
-                                </button>
-                                <span className="text-teal-600 font-mono text-[10px]">Handlebars</span>
-                                <button 
-                                    onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors"
-                                    title={isPreviewOpen ? "Collapse Preview" : "Show Preview"}
-                                >
-                                    {isPreviewOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex-1 min-h-0 relative">
-                             <CodeEditor 
-                                ref={editorRef}
-                                language={'handlebars'} 
-                                value={html} 
-                                onChange={(val) => onChange({ ...content, html: val || '' })} 
-                            />
-                        </div>
-                    </div>
-
-                    {/* Resizable Preview */}
-                    {isPreviewOpen && (
-                        <>
-                             {/* Resize Handle - Only when not stacked */}
-                             {!isStacked && (
-                                <div 
-                                    className="w-1 bg-slate-200 hover:bg-teal-400 cursor-col-resize z-10 hover:w-1.5 -ml-0.5 transition-all flex items-center justify-center group flex-shrink-0"
-                                    onMouseDown={startResizing}
-                                >
-                                    <div className="h-8 w-1 bg-slate-400 rounded-full group-hover:bg-white/80 hidden group-hover:block" />
-                                </div>
-                             )}
-
-                            <div 
-                                className="flex flex-col min-h-0 bg-slate-50/50 overflow-hidden flex-shrink-0"
-                                style={{ 
-                                    width: isStacked ? '100%' : previewWidth,
-                                    height: isStacked ? '50%' : '100%',
-                                    borderTop: isStacked ? '1px solid #e2e8f0' : 'none',
-                                    borderLeft: isStacked ? 'none' : undefined
-                                }}
-                            >
-                                <div className="flex justify-between items-center h-10 px-4 border-b border-slate-200 bg-slate-50">
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Preview</div>
-                                    {error && <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded truncate max-w-[300px]">{error}</span>}
-                                </div>
-                                
-                                {/* Resolved Headers Preview */}
-                                <div className="bg-white border-b border-slate-200 p-4 text-sm shadow-sm z-10 space-y-2">
-                                    <div className="flex gap-2">
-                                        <span className="text-slate-500 w-16 text-xs uppercase font-bold tracking-wider mt-0.5">Subject</span>
-                                        <span className="text-slate-900 font-semibold">{resolvedMeta.subject || <em className="text-slate-300">No subject</em>}</span>
-                                    </div>
-                                    <div className="flex gap-2 text-xs">
-                                        <span className="text-slate-500 w-16 uppercase font-bold tracking-wider">From</span>
-                                        <span className="text-slate-700">{resolvedMeta.from || <em className="text-slate-300">sender@example.com</em>}</span>
-                                    </div>
-                                    <div className="flex gap-2 text-xs">
-                                        <span className="text-slate-500 w-16 uppercase font-bold tracking-wider">To</span>
-                                        <span className="text-slate-700">{resolvedMeta.to || <em className="text-slate-300">recipient@example.com</em>}</span>
-                                    </div>
-                                    {resolvedMeta.cc && (
-                                        <div className="flex gap-2 text-xs">
-                                            <span className="text-slate-500 w-16 uppercase font-bold tracking-wider">CC</span>
-                                            <span className="text-slate-700">{resolvedMeta.cc}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex-1 bg-white overflow-hidden relative shadow-sm">
-                                    <iframe 
-                                        title="email-preview"
-                                        srcDoc={previewContent}
-                                        className="w-full h-full border-none"
-                                        sandbox="allow-same-origin"
-                                    />
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Tools Panel */}
-            <ToolsPanel 
-                variablesJson={variablesJson}
-                onVariablesChange={onVariablesChange}
-                functions={functions}
-                onFunctionsChange={onFunctionsChange}
-                activeEditorType={EditorType.EMAIL_HTML}
-                missingFunctions={missingFunctions}
-                emailBlockGroups={emailBlockGroups}
-                hostImages={hostImages}
-                onAddImage={onAddImage}
-                onDeleteImage={onDeleteImage}
-                onInsert={handleInsert}
-                onUpdateContent={(val) => onChange({ ...content, html: val })}
-                onAiAssist={onAiAssist}
-            />
-        </div>
-    );
-};
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking

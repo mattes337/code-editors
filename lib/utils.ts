@@ -1,5 +1,6 @@
 import { UserFunction } from './types';
 import Handlebars from 'handlebars';
+import yaml from 'js-yaml';
 
 // Register user functions as Handlebars helpers
 const registerHelpers = (functions: UserFunction[]) => {
@@ -39,6 +40,61 @@ const registerHelpers = (functions: UserFunction[]) => {
   Handlebars.registerHelper('and', (...args) => Array.prototype.slice.call(args, 0, args.length - 1).every(Boolean));
   Handlebars.registerHelper('or', (...args) => Array.prototype.slice.call(args, 0, args.length - 1).some(Boolean));
   Handlebars.registerHelper('not', (val) => !val);
+
+  // New Format Dumping Helpers
+  Handlebars.registerHelper('toJsonString', (value) => {
+      try {
+          return new Handlebars.SafeString(JSON.stringify(value, null, 2));
+      } catch (e) {
+          return String(value);
+      }
+  });
+
+  Handlebars.registerHelper('toYamlString', (value) => {
+      try {
+          return new Handlebars.SafeString(yaml.dump(value));
+      } catch (e) {
+          return String(value);
+      }
+  });
+
+  Handlebars.registerHelper('toHtmlDump', (value) => {
+      try {
+          const json = JSON.stringify(value, null, 2);
+          return new Handlebars.SafeString(`<pre class="bg-slate-50 p-2 rounded text-xs font-mono border border-slate-200 overflow-auto max-h-64 whitespace-pre-wrap break-all">${json}</pre>`);
+      } catch (e) {
+          return String(value);
+      }
+  });
+
+  Handlebars.registerHelper('toXmlString', (value) => {
+    const toXml = (obj: any): string => {
+        if (obj === null || obj === undefined) return '';
+        
+        if (Array.isArray(obj)) {
+            return obj.map(item => `<item>${toXml(item)}</item>`).join('');
+        }
+        
+        if (typeof obj === 'object') {
+            return Object.entries(obj).map(([key, val]) => {
+                if (Array.isArray(val)) {
+                    return val.map(item => `<${key}>${toXml(item)}</${key}>`).join('');
+                } else if (typeof val === 'object' && val !== null) {
+                     return `<${key}>${toXml(val)}</${key}>`;
+                } else {
+                     return `<${key}>${val}</${key}>`;
+                }
+            }).join('');
+        }
+        return String(obj);
+    };
+
+    try {
+        return new Handlebars.SafeString(toXml(value));
+    } catch (e) {
+        return String(value);
+    }
+  });
 
   // Built-in Helper: func (Executes a user-defined function by name)
   Handlebars.registerHelper('func', function(name, ...args) {
@@ -155,4 +211,43 @@ export const executeScript = (
   } catch (e: any) {
     return { logs, result: undefined, error: e.message };
   }
+};
+
+// Insert text into a native HTML input/textarea at cursor position
+// Dispatches proper events for React controlled components to update
+export const insertIntoNativeInput = (el: Element | null, text: string): boolean => {
+  if (!el) return false;
+  
+  // Guard clause: Do not attempt to insert into Monaco Editor's hidden textareas
+  // Monaco uses these for input capture, and modifying them directly corrupts the editor state
+  if (el.closest('.monaco-editor') || el.classList.contains('inputarea')) return false;
+
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+    const input = el as HTMLInputElement | HTMLTextAreaElement;
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const value = input.value;
+    const newValue = value.substring(0, start) + text + value.substring(end);
+    
+    // Call native setter to bypass React's property hijacking
+    const prototype = Object.getPrototypeOf(input);
+    const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+    
+    if (prototypeValueSetter) {
+        prototypeValueSetter.call(input, newValue);
+    } else {
+        input.value = newValue;
+    }
+    
+    // Dispatch input event so React sees the change
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Restore cursor position
+    const newPos = start + text.length;
+    input.focus();
+    input.setSelectionRange(newPos, newPos);
+    
+    return true;
+  }
+  return false;
 };

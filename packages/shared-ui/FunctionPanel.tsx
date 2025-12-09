@@ -76,6 +76,7 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({
             draggable
             onDragStart={(e) => handleDragStart(e, func)}
             onClick={() => handleClick(func)}
+            onMouseDown={(e) => e.preventDefault()}
             className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-pointer group/card relative"
             title="Click or drag to insert function"
           >
@@ -92,6 +93,7 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({
             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
                 <button 
                     onClick={(e) => { e.stopPropagation(); handleEdit(func); }} 
+                    onMouseDown={(e) => e.stopPropagation()}
                     className="p-1.5 hover:bg-teal-50 rounded text-slate-400 hover:text-teal-600 transition-colors"
                     title="Edit Function"
                 >
@@ -99,6 +101,7 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({
                 </button>
                 <button 
                     onClick={(e) => deleteFunction(func.id, e)} 
+                    onMouseDown={(e) => e.stopPropagation()}
                     className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
                     title="Delete Function"
                 >

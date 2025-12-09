@@ -10,7 +10,7 @@ import { RestRequest, RestResponse, RestMethod, ApiSource, UserFunction, EditorT
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { KeyValueEditor } from '../shared-ui/KeyValueEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
-import { interpolateString } from '../../lib/utils';
+import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { AuthManagerModal } from './AuthManagerModal';
 
 interface RestEditorProps {
@@ -1067,8 +1067,12 @@ export const RestEditor: React.FC<RestEditorProps> = ({
             onFunctionsChange={onFunctionsChange}
             activeEditorType={EditorType.REST_API}
             onInsert={(text) => {
+                if (insertIntoNativeInput(document.activeElement, text)) return;
+                
                 if (activeTab === 'body') {
-                    bodyEditorRef.current?.insertText(text);
+                    if (bodyEditorRef.current && bodyEditorRef.current.hasTextFocus()) {
+                        bodyEditorRef.current.insertText(text);
+                    }
                 }
             }}
             onUpdateContent={(val) => {

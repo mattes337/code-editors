@@ -11,6 +11,7 @@ loader.config({
 export interface CodeEditorRef {
   insertText: (text: string) => void;
   format: () => void;
+  hasTextFocus: () => boolean;
 }
 
 interface CodeEditorProps {
@@ -106,6 +107,9 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ value = 
     },
     format: () => {
       performFormat();
+    },
+    hasTextFocus: () => {
+      return editorRef.current ? editorRef.current.hasTextFocus() : false;
     }
   }));
 

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { AgentConfig, UserFunction, EditorType } from '../../lib/types';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
-import { interpolateString } from '../../lib/utils';
+import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { 
     Play, Edit2, AlertCircle
 } from 'lucide-react';
@@ -171,9 +171,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
                 onFunctionsChange={onFunctionsChange}
                 activeEditorType={EditorType.AGENT}
                 onInsert={(text) => {
-                    // This is a simplified insertion for now. 
-                    // In a full implementation, we'd track the last focused input in the Atom/Molecule components
-                    // and pass a ref up. For now, we rely on clipboard or drag/drop.
+                    if (insertIntoNativeInput(document.activeElement, text)) return;
                     navigator.clipboard.writeText(text);
                 }}
                 onAiAssist={onAiAssist}

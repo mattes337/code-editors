@@ -52,6 +52,7 @@ export default function App() {
   const [smsContent, setSmsContent] = useState<SmsMessageState>(DEFAULT_SMS_STATE);
   const [scriptContent, setScriptContent] = useState(DEFAULT_SCRIPT_CONTENT);
   const [sqlContent, setSqlContent] = useState(DEFAULT_SQL_CONTENT);
+  const [sqlQueryName, setSqlQueryName] = useState('User Orders Query');
   const [xmlContent, setXmlContent] = useState(DEFAULT_XML_CONTENT);
   
   // Agent State
@@ -276,6 +277,8 @@ export default function App() {
             <DbQueryEditor
                 content={sqlContent}
                 onChange={setSqlContent}
+                queryName={sqlQueryName}
+                onQueryNameChange={setSqlQueryName}
                 connections={dbConnections}
                 activeConnectionId={activeConnectionId}
                 onActiveConnectionChange={setActiveConnectionId}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { interpolateString } from '../../lib/utils';
+import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { UserFunction, EditorType, HostImage } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
@@ -140,9 +140,13 @@ export const HtmlEditor: React.FC<HtmlEditorProps> = ({
     }, [content, variablesObj, functions, hostImages]);
 
     const handleInsert = (text: string) => {
-        if (editorRef.current) {
+        // Prioritize the main editor insertion if it has focus
+        if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
+            return;
         }
+        // Fallback to native input (e.g. sidebar inputs)
+        insertIntoNativeInput(document.activeElement, text);
     };
 
     return (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { UserFunction, EditorType } from '../../lib/types';
-import { executeScript } from '../../lib/utils';
+import { executeScript, insertIntoNativeInput } from '../../lib/utils';
 import { Play, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, Wand2, RefreshCw } from 'lucide-react';
 import { TreeView } from '../shared-ui/TreeView';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
@@ -118,7 +118,9 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     };
 
     const handleInsert = (text: string) => {
-        if (editorRef.current) {
+        if (insertIntoNativeInput(document.activeElement, text)) return;
+
+        if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
         }
     };

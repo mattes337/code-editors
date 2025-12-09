@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { interpolateString } from '../../lib/utils';
+import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { UserFunction, EditorType, XmlSnippetGroup } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
@@ -140,7 +140,9 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
     }, [content, variablesObj, functions]);
 
     const handleInsert = (text: string) => {
-        if (editorRef.current) {
+        if (insertIntoNativeInput(document.activeElement, text)) return;
+
+        if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
         }
     };

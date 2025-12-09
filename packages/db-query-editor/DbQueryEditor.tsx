@@ -4,7 +4,7 @@ import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
 import { ConnectionManagerModal } from './ConnectionManagerModal';
 import { Settings, Database, Play, Loader2, X, RefreshCw, Wand2 } from 'lucide-react';
-import { interpolateString } from '../../lib/utils';
+import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { DEFAULT_SQL_DIALECT_DATA } from '../../lib/constants';
 
 interface DbQueryEditorProps {
@@ -29,6 +29,10 @@ interface DbQueryEditorProps {
     executionResult: string | null;
     onCancelQuery: () => void;
 
+    // New Props
+    queryName?: string;
+    onQueryNameChange?: (name: string) => void;
+
     // Config
     sqlLibrary?: SqlLibrary;
 
@@ -51,6 +55,8 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
     isExecuting,
     executionResult,
     onCancelQuery,
+    queryName = 'Untitled Query',
+    onQueryNameChange,
     sqlLibrary = DEFAULT_SQL_DIALECT_DATA,
     onAiAssist
 }) => {
@@ -102,7 +108,9 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
     };
 
     const handleInsert = (text: string) => {
-        if (editorRef.current) {
+        if (insertIntoNativeInput(document.activeElement, text)) return;
+
+        if (editorRef.current && editorRef.current.hasTextFocus()) {
             editorRef.current.insertText(text);
         }
     };
@@ -113,32 +121,49 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
                 {/* Editor Header / Toolbar */}
                 <div className="h-12 border-b border-slate-200 bg-white flex items-center justify-between px-4 shrink-0">
                     <div className="flex items-center gap-4">
+                        
+                        {/* Name Input */}
                         <div className="flex items-center gap-2">
                             <Database size={16} className="text-teal-600" />
-                            <span className="text-sm font-bold text-slate-700">Connection:</span>
+                            {onQueryNameChange ? (
+                                <input 
+                                    value={queryName}
+                                    onChange={(e) => onQueryNameChange(e.target.value)}
+                                    className="font-bold text-slate-700 text-sm border-none focus:ring-0 p-0 w-64 focus:border-b focus:border-teal-500 bg-transparent placeholder-slate-400 focus:outline-none"
+                                    placeholder="Query Name"
+                                />
+                            ) : (
+                                <span className="font-bold text-slate-700 text-sm">{queryName}</span>
+                            )}
                         </div>
-                        
-                        <div className="relative flex items-center">
-                            <select 
-                                value={activeConnectionId}
-                                onChange={(e) => onActiveConnectionChange(e.target.value)}
-                                disabled={isExecuting}
-                                className={`appearance-none pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 w-48 truncate cursor-pointer ${isExecuting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                <option value="" disabled>Select Connection</option>
-                                {connections.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name} ({c.dialect})</option>
-                                ))}
-                            </select>
-                            {/* Manage Connections Button */}
-                            <button 
-                                onClick={() => setIsManagerOpen(true)}
-                                disabled={isExecuting}
-                                className="ml-2 p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Manage Connections"
-                            >
-                                <Settings size={16} />
-                            </button>
+
+                        <div className="h-5 w-px bg-slate-200"></div>
+
+                        {/* Connection Selector */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:block">Connection</span>
+                            <div className="relative flex items-center">
+                                <select 
+                                    value={activeConnectionId}
+                                    onChange={(e) => onActiveConnectionChange(e.target.value)}
+                                    disabled={isExecuting}
+                                    className={`appearance-none pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 w-48 truncate cursor-pointer ${isExecuting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <option value="">Select Connection</option>
+                                    {connections.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name} ({c.dialect})</option>
+                                    ))}
+                                </select>
+                                {/* Manage Connections Button */}
+                                <button 
+                                    onClick={() => setIsManagerOpen(true)}
+                                    disabled={isExecuting}
+                                    className="ml-2 p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Manage Connections"
+                                >
+                                    <Settings size={16} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
