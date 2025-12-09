@@ -103,7 +103,6 @@ const TreeNode: React.FC<{ node: VariableNode; editorType?: EditorType; onInsert
         draggable
         onDragStart={handleDragStart}
         onClick={handleClick}
-        onMouseDown={(e) => e.preventDefault()}
         title={`Click or drag to insert: ${getInsertText()}`}
       >
         <div 

@@ -76,8 +76,7 @@ export const FunctionPanel: React.FC<FunctionPanelProps> = ({
             draggable
             onDragStart={(e) => handleDragStart(e, func)}
             onClick={() => handleClick(func)}
-            onMouseDown={(e) => e.preventDefault()}
-            className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-pointer group/card relative"
+            className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-pointer group/card relative select-none"
             title="Click or drag to insert function"
           >
             <div className="flex justify-between items-start mb-2">

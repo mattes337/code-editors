@@ -161,22 +161,26 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
                             <span>SMS Composer</span>
                         </div>
 
-                        <div className="h-4 w-px bg-slate-200"></div>
+                        {connections.length > 0 && (
+                            <>
+                                <div className="h-4 w-px bg-slate-200"></div>
 
-                        <div className="flex items-center gap-2">
-                            <Database size={14} className="text-slate-400" />
-                            <select 
-                                value={meta.connectionId}
-                                onChange={(e) => updateMeta('connectionId', e.target.value)}
-                                className="appearance-none bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer hover:text-teal-700"
-                            >
-                                <option value="">Select Connection...</option>
-                                {connections.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                            <ChevronDown size={12} className="text-slate-400 pointer-events-none -ml-1" />
-                        </div>
+                                <div className="flex items-center gap-2">
+                                    <Database size={14} className="text-slate-400" />
+                                    <select 
+                                        value={meta.connectionId}
+                                        onChange={(e) => updateMeta('connectionId', e.target.value)}
+                                        className="appearance-none bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer hover:text-teal-700"
+                                    >
+                                        <option value="">Select Connection...</option>
+                                        {connections.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={12} className="text-slate-400 pointer-events-none -ml-1" />
+                                </div>
+                            </>
+                        )}
                      </div>
                 </div>
 

@@ -165,8 +165,7 @@ export const ImageGalleryPanel: React.FC<ImageGalleryPanelProps> = ({
                     draggable
                     onDragStart={(e) => handleDragStart(e, img)}
                     onClick={() => handleClick(img)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    className="group relative bg-white rounded-lg border border-slate-200 hover:border-teal-400 hover:shadow-sm cursor-pointer active:cursor-grabbing transition-all overflow-hidden flex flex-col"
+                    className="group relative bg-white rounded-lg border border-slate-200 hover:border-teal-400 hover:shadow-sm cursor-pointer active:cursor-grabbing transition-all overflow-hidden flex flex-col select-none"
                     title={img.name}
                 >
                     <div className="aspect-video w-full bg-slate-100 flex items-center justify-center p-2 overflow-hidden bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIi8+CjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNlMmU4ZjAiLz4KPHJlY3QgeD0iNCIgeT0iNCIgd2lkdGg9IjQiIGhlaWdodD0iNCIgZmlsbD0iI2UyZThmMCIvPgo8L3N2Zz4=')]">

@@ -71,8 +71,7 @@ export const SqlFunctionPanel: React.FC<SqlFunctionPanelProps> = ({
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, func.value || func.name)}
                                 onClick={() => handleClick(func.value || func.name)}
-                                onMouseDown={(e) => e.preventDefault()}
-                                className="group flex items-start gap-2 p-2 bg-white rounded border border-slate-200 hover:border-teal-400 hover:shadow-sm cursor-pointer active:cursor-grabbing transition-all relative"
+                                className="group flex items-start gap-2 p-2 bg-white rounded border border-slate-200 hover:border-teal-400 hover:shadow-sm cursor-pointer active:cursor-grabbing transition-all relative select-none"
                                 title="Click or drag to insert"
                             >
                                 <div className="mt-0.5 text-slate-400 group-hover:text-teal-500">
