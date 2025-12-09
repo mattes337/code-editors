@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { interpolateString } from '../../lib/utils';
-import { UserFunction, EditorType, DbConnection } from '../../lib/types';
+import { UserFunction, EditorType, DbConnection, SmsMessageState, SmsMeta } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
 import { PanelRightClose, PanelRightOpen, Wand2, MessageSquare, Database, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface SmsEditorProps {
-    content: string;
-    onChange: (val: string) => void;
+    content: SmsMessageState;
+    onChange: (val: SmsMessageState) => void;
     
     // Store Props
     variablesJson: string;
@@ -23,7 +23,7 @@ interface SmsEditorProps {
 }
 
 export const SmsEditor: React.FC<SmsEditorProps> = ({ 
-    content = '', 
+    content, 
     onChange, 
     variablesJson = '{}',
     onVariablesChange,
@@ -32,11 +32,9 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
     connections = [],
     onAiAssist
 }) => {
-    const [meta, setMeta] = useState({
-        connectionId: '',
-        to: '{{ user.phone }}',
-        from: 'PromoBot',
-    });
+    // Destructure content
+    const { body, meta } = content;
+
     const [isMetaCollapsed, setIsMetaCollapsed] = useState(false);
 
     // Preview State
@@ -113,7 +111,7 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
         const regex = /{{#func:([a-zA-Z0-9_]+)\(/g;
         const missing: Set<string> = new Set();
         let match;
-        while ((match = regex.exec(content)) !== null) {
+        while ((match = regex.exec(body)) !== null) {
             const funcName = match[1];
             if (!safeFunctions.some(f => f.name === funcName)) {
                 missing.add(funcName);
@@ -121,24 +119,24 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
         }
         
         const legacyRegex = /{{\s*func\s+['"]([a-zA-Z0-9_]+)['"]/g;
-        while ((match = legacyRegex.exec(content)) !== null) {
+        while ((match = legacyRegex.exec(body)) !== null) {
             const funcName = match[1];
             if (!safeFunctions.some(f => f.name === funcName)) {
                 missing.add(funcName);
             }
         }
         setMissingFunctions(Array.from(missing));
-    }, [content, functions]);
+    }, [body, functions]);
 
     useEffect(() => {
         try {
-            const interpolated = interpolateString(content, variablesObj, functions || []);
+            const interpolated = interpolateString(body, variablesObj, functions || []);
             setPreviewContent(interpolated);
             setError(null);
         } catch (e: any) {
             setError(e.message);
         }
-    }, [content, variablesObj, functions]);
+    }, [body, variablesObj, functions]);
 
     const handleInsert = (text: string) => {
         if (editorRef.current) {
@@ -146,8 +144,8 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
         }
     };
 
-    const updateMeta = (key: keyof typeof meta, val: string) => {
-        setMeta(prev => ({ ...prev, [key]: val }));
+    const updateMeta = (key: keyof SmsMeta, val: string) => {
+        onChange({ ...content, meta: { ...meta, [key]: val } });
     };
 
     return (
@@ -240,8 +238,8 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
                              <CodeEditor 
                                 ref={editorRef}
                                 language={'handlebars'}
-                                value={content} 
-                                onChange={(val) => onChange(val || '')} 
+                                value={body} 
+                                onChange={(val) => onChange({ ...content, body: val || '' })} 
                             />
                         </div>
                     </div>
@@ -318,7 +316,7 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
                 activeEditorType={EditorType.SMS_MSG}
                 missingFunctions={missingFunctions}
                 onInsert={handleInsert}
-                onUpdateContent={(val) => onChange(val)}
+                onUpdateContent={(val) => onChange({ ...content, body: val })}
                 onAiAssist={onAiAssist}
             />
         </div>

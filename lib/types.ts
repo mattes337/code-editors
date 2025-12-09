@@ -62,6 +62,32 @@ export interface HostImage {
   url: string; // http url or base64
 }
 
+export interface EmailMeta {
+  connectionId: string;
+  to: string;
+  from: string;
+  subject: string;
+  cc: string;
+  bcc: string;
+  replyTo: string;
+}
+
+export interface EmailMessageState {
+  html: string;
+  meta: EmailMeta;
+}
+
+export interface SmsMeta {
+  connectionId: string;
+  to: string;
+  from: string;
+}
+
+export interface SmsMessageState {
+  body: string;
+  meta: SmsMeta;
+}
+
 // -- XML Tool Definitions --
 export interface XmlSnippet {
   name: string;

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { interpolateString } from '../../lib/utils';
-import { UserFunction, EditorType, EmailSnippetGroup, HostImage, DbConnection } from '../../lib/types';
+import { UserFunction, EditorType, EmailSnippetGroup, HostImage, DbConnection, EmailMessageState, EmailMeta } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
 import { PanelRightClose, PanelRightOpen, Wand2, Mail, Database, ChevronDown, ChevronRight } from 'lucide-react';
 import { DEFAULT_EMAIL_SNIPPET_GROUPS } from '../../lib/constants';
 
 interface EmailEditorProps {
-    content: string;
-    onChange: (val: string) => void;
+    content: EmailMessageState;
+    onChange: (val: EmailMessageState) => void;
     
     // Store Props
     variablesJson: string;
@@ -30,7 +30,7 @@ interface EmailEditorProps {
 }
 
 export const EmailEditor: React.FC<EmailEditorProps> = ({ 
-    content = '', 
+    content, 
     onChange, 
     variablesJson = '{}',
     onVariablesChange,
@@ -43,16 +43,8 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
     connections = [],
     onAiAssist
 }) => {
-    // Mode State
-    const [meta, setMeta] = useState({
-        connectionId: '',
-        to: '{{ user.email }}',
-        from: 'noreply@company.com',
-        subject: 'Welcome {{ user.name }}!',
-        cc: '',
-        bcc: '',
-        replyTo: ''
-    });
+    // Destructure content state
+    const { html, meta } = content;
 
     const [resolvedMeta, setResolvedMeta] = useState({
         to: '',
@@ -139,7 +131,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
         const regex = /{{#func:([a-zA-Z0-9_]+)\(/g;
         const missing: Set<string> = new Set();
         let match;
-        while ((match = regex.exec(content)) !== null) {
+        while ((match = regex.exec(html)) !== null) {
             const funcName = match[1];
             if (!safeFunctions.some(f => f.name === funcName)) {
                 missing.add(funcName);
@@ -147,14 +139,14 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
         }
         
         const legacyRegex = /{{\s*func\s+['"]([a-zA-Z0-9_]+)['"]/g;
-        while ((match = legacyRegex.exec(content)) !== null) {
+        while ((match = legacyRegex.exec(html)) !== null) {
             const funcName = match[1];
             if (!safeFunctions.some(f => f.name === funcName)) {
                 missing.add(funcName);
             }
         }
         setMissingFunctions(Array.from(missing));
-    }, [content, functions]);
+    }, [html, functions]);
 
     useEffect(() => {
         try {
@@ -168,7 +160,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                 images: imagesContext
             };
 
-            const interpolated = interpolateString(content, combinedContext, functions || []);
+            const interpolated = interpolateString(html, combinedContext, functions || []);
             setPreviewContent(interpolated);
 
             // Interpolate Meta Fields
@@ -193,7 +185,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
         } catch (e: any) {
             setError(e.message);
         }
-    }, [content, variablesObj, functions, hostImages, meta]);
+    }, [html, variablesObj, functions, hostImages, meta]);
 
     const handleInsert = (text: string) => {
         if (editorRef.current) {
@@ -201,8 +193,8 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
         }
     };
 
-    const updateMeta = (key: keyof typeof meta, val: string) => {
-        setMeta(prev => ({ ...prev, [key]: val }));
+    const updateMeta = (key: keyof EmailMeta, val: string) => {
+        onChange({ ...content, meta: { ...meta, [key]: val } });
     };
 
     return (
@@ -332,8 +324,8 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                              <CodeEditor 
                                 ref={editorRef}
                                 language={'handlebars'} 
-                                value={content} 
-                                onChange={(val) => onChange(val || '')} 
+                                value={html} 
+                                onChange={(val) => onChange({ ...content, html: val || '' })} 
                             />
                         </div>
                     </div>
@@ -414,7 +406,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                 onAddImage={onAddImage}
                 onDeleteImage={onDeleteImage}
                 onInsert={handleInsert}
-                onUpdateContent={(val) => onChange(val)}
+                onUpdateContent={(val) => onChange({ ...content, html: val })}
                 onAiAssist={onAiAssist}
             />
         </div>

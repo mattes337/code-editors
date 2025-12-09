@@ -1,4 +1,4 @@
-import { UserFunction, DbConnection, HostImage, AgentConfig } from './types';
+import { UserFunction, DbConnection, HostImage, AgentConfig, EmailMessageState, SmsMessageState } from './types';
 
 export const DEFAULT_VARIABLES_JSON = `{
   "meta": {
@@ -10,6 +10,7 @@ export const DEFAULT_VARIABLES_JSON = `{
     "id": "u_8823",
     "name": "Alex Rivera",
     "email": "alex.rivera@example.com",
+    "phone": "+15550192834",
     "isActive": true,
     "roles": ["admin", "reviewer"],
     "preferences": {
@@ -117,12 +118,37 @@ export const DEFAULT_HTML_CONTENT = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export const DEFAULT_SMS_CONTENT = `Hello {{ user.name }},
+export const DEFAULT_EMAIL_STATE: EmailMessageState = {
+  html: DEFAULT_HTML_CONTENT,
+  meta: {
+    connectionId: '',
+    to: '{{ user.email }}',
+    from: 'noreply@company.com',
+    subject: 'Welcome {{ user.name }}!',
+    cc: '',
+    bcc: '',
+    replyTo: ''
+  }
+};
+
+const SMS_BODY_CONTENT = `Hello {{ user.name }},
 
 Your order #{{ order.id }} has been shipped!
 Track it here: https://example.com/track/{{ order.id }}
 
 Reply STOP to unsubscribe.`;
+
+export const DEFAULT_SMS_STATE: SmsMessageState = {
+  body: SMS_BODY_CONTENT,
+  meta: {
+    connectionId: '',
+    to: '{{ user.phone }}',
+    from: 'PromoBot'
+  }
+};
+
+// Kept for backward compatibility if any, or used as raw string fallback
+export const DEFAULT_SMS_CONTENT = SMS_BODY_CONTENT;
 
 export const DEFAULT_SCRIPT_CONTENT = `// Access variables via 'input'
 // Use 'log(msg)' to print to console

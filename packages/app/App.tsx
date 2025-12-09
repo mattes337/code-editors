@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EditorType, UserFunction, DbConnection, HostImage, NamedAuthConfig, ApiSource, AgentConfig } from '../../lib/types';
+import { EditorType, UserFunction, DbConnection, HostImage, NamedAuthConfig, ApiSource, AgentConfig, EmailMessageState, SmsMessageState } from '../../lib/types';
 import { JsonEditor } from '../json-editor/JsonEditor';
 import { YamlEditor } from '../yaml-editor/YamlEditor';
 import { EmailEditor } from '../email-editor/EmailEditor';
@@ -16,8 +16,9 @@ import {
   DEFAULT_VARIABLES_JSON,
   DEFAULT_JSON_CONTENT,
   DEFAULT_YAML_CONTENT,
+  DEFAULT_EMAIL_STATE,
   DEFAULT_HTML_CONTENT,
-  DEFAULT_SMS_CONTENT,
+  DEFAULT_SMS_STATE,
   DEFAULT_SCRIPT_CONTENT,
   DEFAULT_SQL_CONTENT,
   DEFAULT_XML_CONTENT,
@@ -46,9 +47,9 @@ export default function App() {
   // Content State
   const [jsonContent, setJsonContent] = useState(DEFAULT_JSON_CONTENT);
   const [yamlContent, setYamlContent] = useState(DEFAULT_YAML_CONTENT);
-  const [emailContent, setEmailContent] = useState(DEFAULT_HTML_CONTENT);
+  const [emailContent, setEmailContent] = useState<EmailMessageState>(DEFAULT_EMAIL_STATE);
   const [htmlPageContent, setHtmlPageContent] = useState(DEFAULT_HTML_CONTENT);
-  const [smsContent, setSmsContent] = useState(DEFAULT_SMS_CONTENT);
+  const [smsContent, setSmsContent] = useState<SmsMessageState>(DEFAULT_SMS_STATE);
   const [scriptContent, setScriptContent] = useState(DEFAULT_SCRIPT_CONTENT);
   const [sqlContent, setSqlContent] = useState(DEFAULT_SQL_CONTENT);
   const [xmlContent, setXmlContent] = useState(DEFAULT_XML_CONTENT);
@@ -158,16 +159,15 @@ export default function App() {
   };
 
   const handleEmailAssist = async (prompt: string): Promise<string> => {
-    return generateHtmlAssistResponse(prompt, emailContent, variablesJson, functions, hostImages);
+    return generateHtmlAssistResponse(prompt, emailContent.html, variablesJson, functions, hostImages);
   };
 
   const handleHtmlPageAssist = async (prompt: string): Promise<string> => {
-    // Reusing HTML generator for generic pages, though prompt tuning could differ
     return generateHtmlAssistResponse(prompt, htmlPageContent, variablesJson, functions, hostImages);
   };
 
   const handleSmsAssist = async (prompt: string): Promise<string> => {
-    return generateSmsAssistResponse(prompt, smsContent, variablesJson, functions);
+    return generateSmsAssistResponse(prompt, smsContent.body, variablesJson, functions);
   };
 
   const handleScriptAssist = async (prompt: string): Promise<string> => {
