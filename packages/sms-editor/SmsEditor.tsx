@@ -268,38 +268,40 @@ export const SmsEditor: React.FC<SmsEditorProps> = ({
                                     borderLeft: isStacked ? 'none' : undefined
                                 }}
                             >
-                                <div className="flex justify-between items-center mb-2 h-6">
+                                <div className="flex justify-between items-center mb-2 h-6 flex-shrink-0">
                                     <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Device Preview</div>
                                     {error && <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded truncate max-w-[300px]">{error}</span>}
                                 </div>
                                 
-                                <div className="flex-1 flex items-center justify-center bg-slate-200 rounded-xl border border-slate-300 relative shadow-inner overflow-hidden">
-                                    <div className="w-[300px] bg-white rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden flex flex-col h-[500px]">
-                                        {/* Fake Phone Header */}
-                                        <div className="bg-slate-100 p-3 border-b border-slate-200 flex items-center justify-between shrink-0">
-                                            <div className="text-[10px] font-bold text-slate-500">9:41</div>
-                                            <div className="flex gap-1">
-                                                <div className="w-3 h-3 rounded-full bg-slate-300"></div>
-                                                <div className="w-3 h-3 rounded-full bg-slate-300"></div>
-                                            </div>
-                                        </div>
-                                        
-                                        {/* Fake Phone Body */}
-                                        <div className="flex-1 bg-slate-50 p-4 overflow-y-auto">
-                                            <div className="flex flex-col gap-2 items-start">
-                                                <div className="bg-slate-200 text-slate-600 text-xs px-3 py-2 rounded-2xl rounded-bl-none max-w-[80%]">
-                                                    Sent from {meta.from}
+                                <div className="flex-1 bg-slate-200 rounded-xl border border-slate-300 relative shadow-inner overflow-auto">
+                                    <div className="min-h-full min-w-full flex items-center justify-center p-4">
+                                        <div className="w-[300px] bg-white rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden flex flex-col h-[500px] shrink-0">
+                                            {/* Fake Phone Header */}
+                                            <div className="bg-slate-100 p-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+                                                <div className="text-[10px] font-bold text-slate-500">9:41</div>
+                                                <div className="flex gap-1">
+                                                    <div className="w-3 h-3 rounded-full bg-slate-300"></div>
+                                                    <div className="w-3 h-3 rounded-full bg-slate-300"></div>
                                                 </div>
-                                                <div className="bg-blue-500 text-white text-sm px-4 py-3 rounded-2xl rounded-bl-none shadow-sm max-w-[90%] break-words whitespace-pre-wrap">
-                                                    {previewContent || <span className="opacity-50 italic">Message content...</span>}
-                                                </div>
-                                                <div className="text-[9px] text-slate-400 ml-1">Delivered</div>
                                             </div>
-                                        </div>
+                                            
+                                            {/* Fake Phone Body */}
+                                            <div className="flex-1 bg-slate-50 p-4 overflow-y-auto">
+                                                <div className="flex flex-col gap-2 items-start">
+                                                    <div className="bg-slate-200 text-slate-600 text-xs px-3 py-2 rounded-2xl rounded-bl-none max-w-[80%]">
+                                                        Sent from {meta.from}
+                                                    </div>
+                                                    <div className="bg-blue-500 text-white text-sm px-4 py-3 rounded-2xl rounded-bl-none shadow-sm max-w-[90%] break-words whitespace-pre-wrap">
+                                                        {previewContent || <span className="opacity-50 italic">Message content...</span>}
+                                                    </div>
+                                                    <div className="text-[9px] text-slate-400 ml-1">Delivered</div>
+                                                </div>
+                                            </div>
 
-                                        {/* Fake Phone Input */}
-                                        <div className="bg-slate-100 p-3 border-t border-slate-200 shrink-0">
-                                            <div className="h-8 bg-white rounded-full border border-slate-200 w-full"></div>
+                                            {/* Fake Phone Input */}
+                                            <div className="bg-slate-100 p-3 border-t border-slate-200 shrink-0">
+                                                <div className="h-8 bg-white rounded-full border border-slate-200 w-full"></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
