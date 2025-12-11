@@ -21,6 +21,12 @@ interface ScriptEditorProps {
 
     // AI Prop
     onAiAssist?: (prompt: string) => Promise<string>;
+
+    // Visibility
+    enablePreview?: boolean;
+    showVariables?: boolean;
+    showFunctions?: boolean;
+    showAi?: boolean;
 }
 
 export const ScriptEditor: React.FC<ScriptEditorProps> = ({ 
@@ -31,7 +37,11 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
     functions = [],
     onFunctionsChange,
     onUpdateVariables,
-    onAiAssist
+    onAiAssist,
+    enablePreview = true,
+    showVariables = true,
+    showFunctions = true,
+    showAi = true
 }) => {
     const [executionResult, setExecutionResult] = useState<{ logs: string[], result: any, error?: string } | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -141,13 +151,15 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                                 >
                                     <Wand2 size={14} />
                                 </button>
-                                <button 
-                                    onClick={toggleSidebar}
-                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors ml-2"
-                                    title={isSidebarOpen ? "Collapse Output Sidebar" : "Show Output Sidebar"}
-                                >
-                                    {isSidebarOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
-                                </button>
+                                {enablePreview && (
+                                    <button 
+                                        onClick={toggleSidebar}
+                                        className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors ml-2"
+                                        title={isSidebarOpen ? "Collapse Output Sidebar" : "Show Output Sidebar"}
+                                    >
+                                        {isSidebarOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+                                    </button>
+                                )}
                             </div>
                             <button 
                                 onClick={runScript} 
@@ -168,7 +180,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                     </div>
 
                     {/* Resizable Output Sidebar */}
-                    {isSidebarOpen && (
+                    {enablePreview && isSidebarOpen && (
                         <>
                             {/* Resize Handle - Only when not stacked */}
                             {!isStacked && (
@@ -268,6 +280,9 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({
                 onInsert={handleInsert}
                 onUpdateContent={(val) => onChange(val)}
                 onAiAssist={onAiAssist}
+                showVariables={showVariables}
+                showFunctions={showFunctions}
+                showChat={showAi}
             />
         </div>
     );

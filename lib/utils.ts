@@ -145,7 +145,7 @@ const registerHelpers = (functions: UserFunction[]) => {
 
 /**
  * Pre-processes the template to support custom syntax:
- * {{#func:myFunc(x, y, z)}} -> {{ func 'myFunc' x y z }}
+ * {{#func:NAME(ARGS)}} -> {{ func 'myFunc' x y z }}
  */
 const preprocessTemplate = (template: string): string => {
     // Regex matches: {{#func:NAME(ARGS)}}

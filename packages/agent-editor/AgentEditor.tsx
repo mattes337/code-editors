@@ -31,6 +31,11 @@ interface AgentEditorProps {
     isRunning?: boolean;
     runError?: string | null;
     externalRunTrigger?: { message: string, timestamp: number } | null;
+
+    // Visibility
+    showVariables?: boolean;
+    showFunctions?: boolean;
+    showAi?: boolean;
 }
 
 export const AgentEditor: React.FC<AgentEditorProps> = ({ 
@@ -44,7 +49,10 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
     onRun,
     isRunning,
     runError,
-    externalRunTrigger
+    externalRunTrigger,
+    showVariables = true,
+    showFunctions = true,
+    showAi = true
 }) => {
     // Local State for Run Trigger interpolation
     const [processedRunTrigger, setProcessedRunTrigger] = useState<{message: string, timestamp: number} | null>(null);
@@ -176,6 +184,9 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
                 }}
                 onAiAssist={onAiAssist}
                 runTrigger={processedRunTrigger}
+                showVariables={showVariables}
+                showFunctions={showFunctions}
+                showChat={showAi}
             />
         </div>
     );

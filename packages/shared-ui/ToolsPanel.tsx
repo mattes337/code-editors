@@ -44,6 +44,13 @@ interface ToolsPanelProps {
 
   // Agent Run Trigger
   runTrigger?: { message: string, timestamp: number } | null;
+
+  // Visibility Controls
+  showVariables?: boolean;
+  showFunctions?: boolean;
+  showBlocks?: boolean;
+  showImages?: boolean;
+  showChat?: boolean;
 }
 
 export const ToolsPanel: React.FC<ToolsPanelProps> = ({
@@ -63,10 +70,43 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   onInsert,
   onUpdateContent,
   onAiAssist,
-  runTrigger
+  runTrigger,
+  showVariables = true,
+  showFunctions = true,
+  showBlocks = true,
+  showImages = true,
+  showChat = true
 }) => {
+  // Constants for modes
+  const isSqlMode = activeEditorType === EditorType.DB_QUERY;
+  const isHtmlMode = activeEditorType === EditorType.EMAIL_HTML;
+  const isXmlMode = activeEditorType === EditorType.XML_TEMPLATE;
+
+  // Determine available tabs based on props and mode
+  const availableTabs = useMemo(() => {
+    const tabs: string[] = [];
+    if (showVariables) tabs.push('variables');
+    if (showFunctions) tabs.push('functions');
+    if ((isHtmlMode || isXmlMode) && showBlocks) tabs.push('blocks');
+    if (isHtmlMode && showImages) tabs.push('images');
+    if (showChat) tabs.push('chat');
+    return tabs;
+  }, [showVariables, showFunctions, showBlocks, showImages, showChat, isHtmlMode, isXmlMode]);
+
+  // If no tabs are available, don't render the panel
+  if (availableTabs.length === 0) {
+      return null;
+  }
+
   const [activeTab, setActiveTab] = useState<'variables' | 'functions' | 'blocks' | 'images' | 'chat'>('variables');
   
+  // Ensure active tab is valid
+  useEffect(() => {
+      if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
+          setActiveTab(availableTabs[0] as any);
+      }
+  }, [availableTabs, activeTab]);
+
   // Initialize collapse state based on screen width
   const [isCollapsed, setIsCollapsed] = useState(() => {
       if (typeof window !== 'undefined') {
@@ -103,11 +143,6 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
     }
   }, [variablesJson]);
 
-  // Constants for modes
-  const isSqlMode = activeEditorType === EditorType.DB_QUERY;
-  const isHtmlMode = activeEditorType === EditorType.EMAIL_HTML;
-  const isXmlMode = activeEditorType === EditorType.XML_TEMPLATE;
-
   // Auto-collapse on resize when crossing threshold
   useEffect(() => {
     let prevWidth = window.innerWidth;
@@ -126,15 +161,15 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
   // Auto-switch to functions tab if missing functions detected
   useEffect(() => {
-    if (missingFunctions.length > 0) {
+    if (missingFunctions.length > 0 && showFunctions) {
         setActiveTab('functions');
         setIsCollapsed(false);
     }
-  }, [missingFunctions.length]);
+  }, [missingFunctions.length, showFunctions]);
 
   // Handle external run trigger for Agent mode
   useEffect(() => {
-    if (runTrigger && runTrigger.message) {
+    if (runTrigger && runTrigger.message && showChat) {
         setActiveTab('chat');
         setIsCollapsed(false);
         // Only trigger if we aren't already loading
@@ -142,7 +177,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             handleSendMessage(runTrigger.message);
         }
     }
-  }, [runTrigger]);
+  }, [runTrigger, showChat]);
 
   // Resizing State
   const [width, setWidth] = useState(320);
@@ -237,7 +272,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   };
 
   const renderContent = () => {
-    if (activeTab === 'chat') {
+    if (activeTab === 'chat' && showChat) {
         return (
             <AiChatPanel 
                 messages={chatMessages}
@@ -248,7 +283,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
         );
     }
 
-    if (activeTab === 'variables') {
+    if (activeTab === 'variables' && showVariables) {
       return (
         <div className="flex flex-col h-full relative">
           {variableError && (
@@ -276,14 +311,14 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
       );
     }
 
-    if (activeTab === 'blocks') {
+    if (activeTab === 'blocks' && ((isXmlMode || isHtmlMode) && showBlocks)) {
         if (isXmlMode) {
           return <XmlToolboxPanel snippetGroups={xmlBlockGroups} onInsert={onInsert} />;
         }
         return <EmailToolboxPanel snippetGroups={emailBlockGroups} onInsert={onInsert} />;
     }
 
-    if (activeTab === 'images') {
+    if (activeTab === 'images' && (isHtmlMode && showImages)) {
         return (
             <ImageGalleryPanel 
                 images={hostImages} 
@@ -295,42 +330,46 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
     }
 
     // Default: Functions Tab
-    if (isSqlMode) {
-      return <SqlFunctionPanel dialect={sqlDialect} library={sqlLibrary} onInsert={onInsert} />;
-    }
+    if (activeTab === 'functions' && showFunctions) {
+      if (isSqlMode) {
+        return <SqlFunctionPanel dialect={sqlDialect} library={sqlLibrary} onInsert={onInsert} />;
+      }
 
-    return (
-      <div className="flex flex-col h-full">
-        {/* Missing Functions Alert */}
-        {missingFunctions.length > 0 && (
-          <div className="bg-amber-50 border-b border-amber-100 p-3 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-700">
-              <AlertTriangle size={14} />
-              <span>Missing Functions Detected</span>
+      return (
+        <div className="flex flex-col h-full">
+          {/* Missing Functions Alert */}
+          {missingFunctions.length > 0 && (
+            <div className="bg-amber-50 border-b border-amber-100 p-3 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-700">
+                <AlertTriangle size={14} />
+                <span>Missing Functions Detected</span>
+              </div>
+              <div className="space-y-1">
+                {missingFunctions.map(name => (
+                  <div key={name} className="flex items-center justify-between bg-white border border-amber-200 rounded px-2 py-1">
+                    <span className="text-xs font-mono text-amber-800">{name}</span>
+                    <button 
+                      onClick={() => handleQuickAdd(name)}
+                      className="text-[10px] flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-medium transition-colors"
+                    >
+                      <Plus size={10} /> Add
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-1">
-              {missingFunctions.map(name => (
-                <div key={name} className="flex items-center justify-between bg-white border border-amber-200 rounded px-2 py-1">
-                  <span className="text-xs font-mono text-amber-800">{name}</span>
-                  <button 
-                    onClick={() => handleQuickAdd(name)}
-                    className="text-[10px] flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-medium transition-colors"
-                  >
-                    <Plus size={10} /> Add
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <FunctionPanel 
-          functions={functions} 
-          onUpdateFunctions={onFunctionsChange}
-          activeEditorType={activeEditorType} 
-          onInsert={onInsert}
-        />
-      </div>
-    );
+          )}
+          <FunctionPanel 
+            functions={functions} 
+            onUpdateFunctions={onFunctionsChange}
+            activeEditorType={activeEditorType} 
+            onInsert={onInsert}
+          />
+        </div>
+      );
+    }
+    
+    return null;
   };
 
   const TabButton = ({ id, icon, label, badgeCount }: { id: string, icon: React.ReactNode, label: string, badgeCount?: number }) => (
@@ -372,15 +411,15 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             
             {!isCollapsed && (
             <div className="flex flex-1">
-                <TabButton id="variables" icon={<Braces size={16} />} label="Variables" />
-                <TabButton id="functions" icon={<Code2 size={16} />} label={isSqlMode ? 'SQL Functions' : 'User Functions'} badgeCount={missingFunctions.length} />
-                {(isHtmlMode || isXmlMode) && (
+                {showVariables && <TabButton id="variables" icon={<Braces size={16} />} label="Variables" />}
+                {showFunctions && <TabButton id="functions" icon={<Code2 size={16} />} label={isSqlMode ? 'SQL Functions' : 'User Functions'} badgeCount={missingFunctions.length} />}
+                {((isHtmlMode || isXmlMode) && showBlocks) && (
                      <TabButton id="blocks" icon={isXmlMode ? <FileCode size={16} /> : <Layout size={16} />} label="Building Blocks" />
                 )}
-                {isHtmlMode && (
+                {(isHtmlMode && showImages) && (
                     <TabButton id="images" icon={<ImageIcon size={16} />} label="Images" />
                 )}
-                <TabButton id="chat" icon={<Sparkles size={16} />} label="AI Assistant" />
+                {showChat && <TabButton id="chat" icon={<Sparkles size={16} />} label="AI Assistant" />}
             </div>
             )}
 
@@ -396,24 +435,28 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
         {/* Collapsed State Quick Actions */}
         {isCollapsed && (
             <div className="flex-col items-center gap-4 mt-4 flex">
-                <button 
-                    onClick={() => { setIsCollapsed(false); setActiveTab('variables'); }}
-                    className={`p-2 rounded-lg ${activeTab === 'variables' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
-                    title="Variables"
-                >
-                    <Braces size={18} />
-                </button>
-                <button 
-                    onClick={() => { setIsCollapsed(false); setActiveTab('functions'); }}
-                    className={`p-2 rounded-lg ${activeTab === 'functions' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'} relative`}
-                    title="Functions"
-                >
-                    <Code2 size={18} />
-                    {missingFunctions.length > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
-                    )}
-                </button>
-                {(isHtmlMode || isXmlMode) && (
+                {showVariables && (
+                    <button 
+                        onClick={() => { setIsCollapsed(false); setActiveTab('variables'); }}
+                        className={`p-2 rounded-lg ${activeTab === 'variables' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
+                        title="Variables"
+                    >
+                        <Braces size={18} />
+                    </button>
+                )}
+                {showFunctions && (
+                    <button 
+                        onClick={() => { setIsCollapsed(false); setActiveTab('functions'); }}
+                        className={`p-2 rounded-lg ${activeTab === 'functions' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'} relative`}
+                        title="Functions"
+                    >
+                        <Code2 size={18} />
+                        {missingFunctions.length > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                        )}
+                    </button>
+                )}
+                {((isHtmlMode || isXmlMode) && showBlocks) && (
                   <button 
                     onClick={() => { setIsCollapsed(false); setActiveTab('blocks'); }}
                     className={`p-2 rounded-lg ${activeTab === 'blocks' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -422,7 +465,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                       {isXmlMode ? <FileCode size={18} /> : <Layout size={18} />}
                   </button>
                 )}
-                {isHtmlMode && (
+                {(isHtmlMode && showImages) && (
                     <button 
                         onClick={() => { setIsCollapsed(false); setActiveTab('images'); }}
                         className={`p-2 rounded-lg ${activeTab === 'images' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -431,13 +474,15 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                         <ImageIcon size={18} />
                     </button>
                 )}
-                 <button 
-                    onClick={() => { setIsCollapsed(false); setActiveTab('chat'); }}
-                    className={`p-2 rounded-lg ${activeTab === 'chat' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
-                    title="AI Assistant"
-                >
-                    <Sparkles size={18} />
-                </button>
+                 {showChat && (
+                    <button 
+                        onClick={() => { setIsCollapsed(false); setActiveTab('chat'); }}
+                        className={`p-2 rounded-lg ${activeTab === 'chat' ? 'bg-teal-50 text-teal-600' : 'text-slate-400 hover:text-slate-600'}`}
+                        title="AI Assistant"
+                    >
+                        <Sparkles size={18} />
+                    </button>
+                 )}
             </div>
         )}
 

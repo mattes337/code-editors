@@ -21,6 +21,13 @@ interface XmlEditorProps {
 
     // AI Prop
     onAiAssist?: (prompt: string) => Promise<string>;
+
+    // Visibility
+    enablePreview?: boolean;
+    showVariables?: boolean;
+    showFunctions?: boolean;
+    showBlocks?: boolean;
+    showAi?: boolean;
 }
 
 export const XmlEditor: React.FC<XmlEditorProps> = ({ 
@@ -31,7 +38,12 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
     functions = [],
     onFunctionsChange,
     xmlBlockGroups = DEFAULT_XML_SNIPPET_GROUPS,
-    onAiAssist
+    onAiAssist,
+    enablePreview = true,
+    showVariables = true,
+    showFunctions = true,
+    showBlocks = true,
+    showAi = true
 }) => {
     const [preview, setPreview] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
@@ -124,6 +136,7 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
     }, [content, functions]);
 
     useEffect(() => {
+        if (!enablePreview) return;
         try {
             const interpolated = interpolateString(content, variablesObj, functions);
             setPreview(interpolated);
@@ -137,7 +150,7 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
                 setPreview(`Template Error: ${handlebarsError.message}`);
             }
         }
-    }, [content, variablesObj, functions]);
+    }, [content, variablesObj, functions, enablePreview]);
 
     const handleInsert = (text: string) => {
         if (insertIntoNativeInput(document.activeElement, text)) return;
@@ -164,13 +177,15 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
                                     <Wand2 size={14} />
                                 </button>
                                 <span className="text-teal-600 font-mono text-[10px]">Handlebars</span>
-                                <button 
-                                    onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors"
-                                    title={isPreviewOpen ? "Collapse Output" : "Show Output"}
-                                >
-                                    {isPreviewOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
-                                </button>
+                                {enablePreview && (
+                                    <button 
+                                        onClick={() => setIsPreviewOpen(!isPreviewOpen)}
+                                        className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors"
+                                        title={isPreviewOpen ? "Collapse Output" : "Show Output"}
+                                    >
+                                        {isPreviewOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="flex-1 min-h-0 relative">
@@ -184,7 +199,7 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
                     </div>
                     
                     {/* Resizable Preview Panel */}
-                    {isPreviewOpen && (
+                    {enablePreview && isPreviewOpen && (
                         <>
                             {/* Resize Handle - Only when not stacked */}
                             {!isStacked && (
@@ -235,6 +250,10 @@ export const XmlEditor: React.FC<XmlEditorProps> = ({
                 onInsert={handleInsert}
                 onUpdateContent={(val) => onChange(val)}
                 onAiAssist={onAiAssist}
+                showVariables={showVariables}
+                showFunctions={showFunctions}
+                showBlocks={showBlocks}
+                showChat={showAi}
             />
         </div>
     );

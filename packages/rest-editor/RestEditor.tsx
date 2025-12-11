@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronDown, MoreVertical, 
   Settings, Wifi, Shield, Database, 
   FileCode, Send, RefreshCw, X, Search, Globe, Box,
-  PanelLeftClose, PanelLeftOpen, Loader2, Trash2, Key
+  PanelLeftClose, PanelLeftOpen, Loader2, Trash2, Key, Target, Beaker
 } from 'lucide-react';
 import { RestRequest, RestResponse, RestMethod, ApiSource, UserFunction, EditorType, NamedAuthConfig, RestParam } from '../../lib/types';
 import { CodeEditor, CodeEditorRef } from '../shared-ui/CodeEditor';
@@ -12,6 +12,7 @@ import { KeyValueEditor } from '../shared-ui/KeyValueEditor';
 import { ToolsPanel } from '../shared-ui/ToolsPanel';
 import { interpolateString, insertIntoNativeInput } from '../../lib/utils';
 import { AuthManagerModal } from './AuthManagerModal';
+import { TreeView } from '../shared-ui/TreeView';
 
 interface RestEditorProps {
   variablesJson: string;
@@ -23,6 +24,12 @@ interface RestEditorProps {
   apiSources: ApiSource[];
   onApiSourcesChange: (sources: ApiSource[]) => void;
   onAiAssist?: (prompt: string) => Promise<string>;
+  
+  // Visibility
+  enablePreview?: boolean;
+  showVariables?: boolean;
+  showFunctions?: boolean;
+  showAi?: boolean;
 }
 
 const DEFAULT_REQUEST: RestRequest = {
@@ -227,7 +234,11 @@ export const RestEditor: React.FC<RestEditorProps> = ({
   onAuthCredentialsChange,
   apiSources = [],
   onApiSourcesChange,
-  onAiAssist
+  onAiAssist,
+  enablePreview = true,
+  showVariables = true,
+  showFunctions = true,
+  showAi = true
 }) => {
   // --- Registry State ---
   const [isAddingSource, setIsAddingSource] = useState(false);
@@ -362,12 +373,23 @@ export const RestEditor: React.FC<RestEditorProps> = ({
                     }
                 } 
                 else if (spec.servers && spec.servers.length > 0) {
-                    finalBaseUrl = spec.servers[0].url;
-                    if (finalBaseUrl.startsWith('/') && finalSpecUrl) {
-                        try {
-                             const origin = new URL(finalSpecUrl).origin;
-                             finalBaseUrl = `${origin}${finalBaseUrl}`;
-                        } catch (e) {}
+                    const server = spec.servers[0];
+                    let serverUrl = server.url;
+                    
+                    if (serverUrl.startsWith('/')) {
+                         let origin = '';
+                         if (finalSpecUrl) {
+                             try {
+                                 origin = new URL(finalSpecUrl).origin;
+                             } catch {}
+                         }
+                         if (origin) {
+                             finalBaseUrl = `${origin}${serverUrl}`;
+                         } else {
+                             finalBaseUrl = serverUrl;
+                         }
+                    } else {
+                        finalBaseUrl = serverUrl;
                     }
                 } 
                 else if (finalSpecUrl) {
@@ -434,8 +456,9 @@ export const RestEditor: React.FC<RestEditorProps> = ({
 
       const addParamToMap = (p: any) => {
           const resolved = p.$ref ? (resolveRef(p.$ref, fullSpec) || p) : p;
-          if (resolved && resolved.name && resolved.in) {
-              paramMap.set(`${resolved.in}:${resolved.name}`, resolved);
+          if (resolved && resolved.in) {
+              const name = resolved.name || (resolved.in === 'body' ? 'body' : 'unknown');
+              paramMap.set(`${resolved.in}:${name}`, resolved);
           }
       };
 
@@ -473,15 +496,29 @@ export const RestEditor: React.FC<RestEditorProps> = ({
               newReq.headers.push({ 
                   id: uniqueId, 
                   key: p.name,
-                  value: value,
-                  enabled: !!p.required,
+                  value: value, 
+                  enabled: !!p.required, 
                   description: desc
               });
+          } else if (p.in === 'body') {
+              // Swagger 2.0 Body Param
+              if (p.schema) {
+                  const mock = generateMockData(p.schema, fullSpec);
+                  if (mock) {
+                      newReq.body = JSON.stringify(mock, null, 2);
+                  }
+              }
           }
       });
       
-      if (['POST', 'PUT', 'PATCH'].includes(endpoint.method)) {
-          const requestBody = endpoint.spec.requestBody;
+      if (['POST', 'PUT', 'PATCH'].includes(endpoint.method) && !newReq.body) {
+          let requestBody = endpoint.spec.requestBody;
+
+          // Resolve ref if present
+          if (requestBody && requestBody.$ref) {
+              requestBody = resolveRef(requestBody.$ref, fullSpec) || requestBody;
+          }
+
           if (requestBody) {
              const content = requestBody.content;
              if (content && content['application/json']) {
@@ -512,11 +549,19 @@ export const RestEditor: React.FC<RestEditorProps> = ({
 
     try {
         // Interpolate URL and Body
-        const interpolatedUrl = interpolateString(activeRequest.url, variablesObj, functions);
+        let processedUrl = interpolateString(activeRequest.url, variablesObj, functions);
         const interpolatedBody = activeRequest.body ? interpolateString(activeRequest.body, variablesObj, functions) : undefined;
         
+        // Fill Path Params (Before creating URL object to avoid encoding issues on braces)
+        activeRequest.pathParams.forEach(p => {
+             if (p.enabled && p.key) {
+                 const val = interpolateString(p.value, variablesObj, functions);
+                 processedUrl = processedUrl.split(`{${p.key}}`).join(val);
+             }
+        });
+
         // Build URL with Query Params
-        const urlObj = new URL(interpolatedUrl);
+        const urlObj = new URL(processedUrl);
         activeRequest.params.forEach(p => {
             if (p.enabled && p.key) {
                 const val = interpolateString(p.value, variablesObj, functions);
@@ -524,14 +569,7 @@ export const RestEditor: React.FC<RestEditorProps> = ({
             }
         });
         
-        // Fill Path Params
         let finalUrl = urlObj.toString();
-        activeRequest.pathParams.forEach(p => {
-             if (p.enabled && p.key) {
-                 const val = interpolateString(p.value, variablesObj, functions);
-                 finalUrl = finalUrl.replace(`{${p.key}}`, val);
-             }
-        });
 
         // Headers
         const headers: Record<string, string> = {};
@@ -582,7 +620,7 @@ export const RestEditor: React.FC<RestEditorProps> = ({
             data: text,
             timestamp: Date.now()
         });
-
+        
     } catch (e: any) {
         setResponse({
             status: 0,
@@ -963,6 +1001,7 @@ export const RestEditor: React.FC<RestEditorProps> = ({
                         value={activeRequest.url}
                         onChange={(e) => updateRequest('url', e.target.value)}
                     />
+
                     <button 
                         onClick={handleRun}
                         disabled={isLoading}
@@ -1011,51 +1050,53 @@ export const RestEditor: React.FC<RestEditorProps> = ({
                     </div>
 
                     {/* Response Viewer */}
-                    <div className={`flex-1 flex flex-col min-h-0 bg-slate-50 ${response ? '' : 'justify-center items-center'}`}>
-                        {response ? (
-                            <>
-                                <div className="px-4 py-2 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`text-sm font-bold ${response.status >= 200 && response.status < 300 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {response.status} {response.statusText}
+                    {enablePreview && (
+                        <div className={`flex-1 flex flex-col min-h-0 bg-slate-50`}>
+                            {response ? (
+                                <>
+                                    <div className="px-4 py-2 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`text-sm font-bold ${response.status >= 200 && response.status < 300 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {response.status} {response.statusText}
+                                            </div>
+                                            <div className="text-xs text-slate-500 flex items-center gap-1">
+                                                <Clock size={12} /> {response.time}ms
+                                            </div>
+                                            <div className="text-xs text-slate-500 flex items-center gap-1">
+                                                <Download size={12} /> {(response.size / 1024).toFixed(2)} KB
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-slate-500 flex items-center gap-1">
-                                            <Clock size={12} /> {response.time}ms
-                                        </div>
-                                        <div className="text-xs text-slate-500 flex items-center gap-1">
-                                            <Download size={12} /> {(response.size / 1024).toFixed(2)} KB
-                                        </div>
+                                        <button 
+                                            className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                                            onClick={() => {
+                                                const blob = new Blob([response.data], { type: 'application/json' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `response_${Date.now()}.json`;
+                                                a.click();
+                                            }}
+                                        >
+                                            Save Response
+                                        </button>
                                     </div>
-                                    <button 
-                                        className="text-xs text-teal-600 hover:text-teal-700 font-medium"
-                                        onClick={() => {
-                                            const blob = new Blob([response.data], { type: 'application/json' });
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `response_${Date.now()}.json`;
-                                            a.click();
-                                        }}
-                                    >
-                                        Save Response
-                                    </button>
+                                    <div className="flex-1 overflow-hidden relative">
+                                        <CodeEditor 
+                                            language="json" 
+                                            value={response.data} 
+                                            onChange={() => {}} 
+                                            readOnly={true}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
+                                    <Globe size={48} className="mx-auto mb-4 opacity-50" />
+                                    <p className="text-sm font-medium">Enter URL and click Send</p>
                                 </div>
-                                <div className="flex-1 overflow-hidden relative">
-                                    <CodeEditor 
-                                        language="json" 
-                                        value={response.data} 
-                                        onChange={() => {}} 
-                                        readOnly={true}
-                                    />
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center text-slate-300">
-                                <Globe size={48} className="mx-auto mb-4 opacity-50" />
-                                <p className="text-sm font-medium">Enter URL and click Send</p>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
        </div>
@@ -1079,6 +1120,9 @@ export const RestEditor: React.FC<RestEditorProps> = ({
                 if (activeTab === 'body') updateRequest('body', val);
             }}
             onAiAssist={onAiAssist}
+            showVariables={showVariables}
+            showFunctions={showFunctions}
+            showChat={showAi}
        />
        
        <AuthManagerModal 

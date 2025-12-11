@@ -38,6 +38,12 @@ interface DbQueryEditorProps {
 
     // AI Prop
     onAiAssist?: (prompt: string) => Promise<string>;
+
+    // Visibility
+    enablePreview?: boolean;
+    showVariables?: boolean;
+    showFunctions?: boolean;
+    showAi?: boolean;
 }
 
 export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({ 
@@ -58,7 +64,11 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
     queryName = 'Untitled Query',
     onQueryNameChange,
     sqlLibrary = DEFAULT_SQL_DIALECT_DATA,
-    onAiAssist
+    onAiAssist,
+    enablePreview = true,
+    showVariables = true,
+    showFunctions = true,
+    showAi = true
 }) => {
     const [isManagerOpen, setIsManagerOpen] = useState(false);
     const [interpolatedQuery, setInterpolatedQuery] = useState('');
@@ -196,88 +206,90 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
                     </div>
 
                     {/* Preview / Results Panel */}
-                    <div className="lg:w-1/3 flex flex-col min-h-0 bg-slate-50/50 p-4 border-l border-slate-200">
-                         
-                         {/* Compiled Query Section */}
-                         <div className="flex-col flex-shrink-0 h-1/3 min-h-[150px] mb-4 flex">
-                            <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider h-6">Compiled Query</div>
-                            <div className="flex-1 bg-white border border-slate-200 rounded-lg overflow-hidden relative">
-                                <CodeEditor 
-                                    language="sql" 
-                                    value={interpolatedQuery} 
-                                    onChange={() => {}} 
-                                    readOnly={true}
-                                />
-                            </div>
-                         </div>
-                         
-                         {/* Execution Results Section */}
-                         <div className="flex flex-col flex-1 min-h-0">
-                            <div className="flex justify-between items-center mb-2 h-6">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Query Results</span>
-                                {executionResult && !isExecuting && (
-                                    <button 
-                                        onClick={handleExecute}
-                                        className="text-[10px] flex items-center gap-1 text-teal-600 hover:text-teal-700 font-medium"
-                                    >
-                                        <RefreshCw size={10} /> Re-run
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className={`flex-1 rounded-xl border flex flex-col overflow-hidden relative shadow-sm
-                                ${isExecuting ? 'bg-slate-50 border-teal-200' : 'bg-white border-slate-200'}`}>
-                                
-                                {isExecuting ? (
-                                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                                        <div className="mb-4 relative">
-                                            <div className="absolute inset-0 bg-teal-200/50 rounded-full animate-ping"></div>
-                                            <div className="relative p-3 bg-white rounded-full border border-teal-100 shadow-sm">
-                                                <Loader2 size={24} className="text-teal-600 animate-spin" />
-                                            </div>
-                                        </div>
-                                        <h4 className="font-bold text-slate-700 mb-1">Executing Query...</h4>
-                                        <p className="text-sm text-slate-400 mb-6">Waiting for database response</p>
-                                        <button 
-                                            onClick={onCancelQuery}
-                                            className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            <X size={14} /> Cancel
-                                        </button>
-                                    </div>
-                                ) : executionResult ? (
-                                    <div className="flex-1 flex flex-col min-h-0 relative">
-                                        <CodeEditor 
-                                            language="json" 
-                                            value={executionResult} 
-                                            onChange={() => {}} 
-                                            readOnly={true}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                                        <div className="p-4 bg-teal-50 rounded-full mb-3">
-                                            <Play size={24} className="text-teal-600 ml-1" />
-                                        </div>
-                                        <h4 className="font-bold text-slate-700 mb-1">Ready to Execute</h4>
-                                        <p className="text-sm text-slate-400 mb-4 max-w-[200px]">
-                                            Execute against <span className="font-mono text-teal-600">{activeConnection?.name || '...'}</span>
-                                        </p>
+                    {enablePreview && (
+                        <div className="lg:w-1/3 flex flex-col min-h-0 bg-slate-50/50 p-4 border-l border-slate-200">
+                             
+                             {/* Compiled Query Section */}
+                             <div className="flex-col flex-shrink-0 h-1/3 min-h-[150px] mb-4 flex">
+                                <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider h-6">Compiled Query</div>
+                                <div className="flex-1 bg-white border border-slate-200 rounded-lg overflow-hidden relative">
+                                    <CodeEditor 
+                                        language="sql" 
+                                        value={interpolatedQuery} 
+                                        onChange={() => {}} 
+                                        readOnly={true}
+                                    />
+                                </div>
+                             </div>
+                             
+                             {/* Execution Results Section */}
+                             <div className="flex flex-col flex-1 min-h-0">
+                                <div className="flex justify-between items-center mb-2 h-6">
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Query Results</span>
+                                    {executionResult && !isExecuting && (
                                         <button 
                                             onClick={handleExecute}
-                                            disabled={!activeConnection}
-                                            className={`px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all shadow-lg
-                                                ${activeConnection 
-                                                    ? 'bg-teal-600 hover:bg-teal-700 hover:scale-105 shadow-teal-600/30' 
-                                                    : 'bg-slate-300 cursor-not-allowed'}`}
+                                            className="text-[10px] flex items-center gap-1 text-teal-600 hover:text-teal-700 font-medium"
                                         >
-                                            Run Query
+                                            <RefreshCw size={10} /> Re-run
                                         </button>
-                                    </div>
-                                )}
-                            </div>
-                         </div>
-                    </div>
+                                    )}
+                                </div>
+
+                                <div className={`flex-1 rounded-xl border flex flex-col overflow-hidden relative shadow-sm
+                                    ${isExecuting ? 'bg-slate-50 border-teal-200' : 'bg-white border-slate-200'}`}>
+                                    
+                                    {isExecuting ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                                            <div className="mb-4 relative">
+                                                <div className="absolute inset-0 bg-teal-200/50 rounded-full animate-ping"></div>
+                                                <div className="relative p-3 bg-white rounded-full border border-teal-100 shadow-sm">
+                                                    <Loader2 size={24} className="text-teal-600 animate-spin" />
+                                                </div>
+                                            </div>
+                                            <h4 className="font-bold text-slate-700 mb-1">Executing Query...</h4>
+                                            <p className="text-sm text-slate-400 mb-6">Waiting for database response</p>
+                                            <button 
+                                                onClick={onCancelQuery}
+                                                className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-colors"
+                                            >
+                                                <X size={14} /> Cancel
+                                            </button>
+                                        </div>
+                                    ) : executionResult ? (
+                                        <div className="flex-1 flex flex-col min-h-0 relative">
+                                            <CodeEditor 
+                                                language="json" 
+                                                value={executionResult} 
+                                                onChange={() => {}} 
+                                                readOnly={true}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                                            <div className="p-4 bg-teal-50 rounded-full mb-3">
+                                                <Play size={24} className="text-teal-600 ml-1" />
+                                            </div>
+                                            <h4 className="font-bold text-slate-700 mb-1">Ready to Execute</h4>
+                                            <p className="text-sm text-slate-400 mb-4 max-w-[200px]">
+                                                Execute against <span className="font-mono text-teal-600">{activeConnection?.name || '...'}</span>
+                                            </p>
+                                            <button 
+                                                onClick={handleExecute}
+                                                disabled={!activeConnection}
+                                                className={`px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-all shadow-lg
+                                                    ${activeConnection 
+                                                        ? 'bg-teal-600 hover:bg-teal-700 hover:scale-105 shadow-teal-600/30' 
+                                                        : 'bg-slate-300 cursor-not-allowed'}`}
+                                            >
+                                                Run Query
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                             </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -294,6 +306,9 @@ export const DbQueryEditor: React.FC<DbQueryEditorProps> = ({
                 onInsert={handleInsert}
                 onUpdateContent={(val) => onChange(val)}
                 onAiAssist={onAiAssist}
+                showVariables={showVariables}
+                showFunctions={showFunctions}
+                showChat={showAi}
             />
 
             <ConnectionManagerModal 

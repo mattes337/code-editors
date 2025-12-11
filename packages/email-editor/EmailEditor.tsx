@@ -27,6 +27,14 @@ interface EmailEditorProps {
 
     // AI Prop
     onAiAssist?: (prompt: string) => Promise<string>;
+
+    // Visibility
+    enablePreview?: boolean;
+    showVariables?: boolean;
+    showFunctions?: boolean;
+    showBlocks?: boolean;
+    showImages?: boolean;
+    showAi?: boolean;
 }
 
 export const EmailEditor: React.FC<EmailEditorProps> = ({ 
@@ -41,7 +49,13 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
     onAddImage,
     onDeleteImage,
     connections = [],
-    onAiAssist
+    onAiAssist,
+    enablePreview = true,
+    showVariables = true,
+    showFunctions = true,
+    showBlocks = true,
+    showImages = true,
+    showAi = true
 }) => {
     // Destructure content state
     const { html, meta } = content;
@@ -149,6 +163,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
     }, [html, functions]);
 
     useEffect(() => {
+        if (!enablePreview) return;
         try {
             const imagesContext = (hostImages || []).reduce((acc, img) => {
                 acc[img.name] = img.url;
@@ -185,7 +200,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
         } catch (e: any) {
             setError(e.message);
         }
-    }, [html, variablesObj, functions, hostImages, meta]);
+    }, [html, variablesObj, functions, hostImages, meta, enablePreview]);
 
     const handleInsert = (text: string) => {
         // Prioritize Monaco Editor if it has focus
@@ -319,13 +334,15 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                                     <Wand2 size={14} />
                                 </button>
                                 <span className="text-teal-600 font-mono text-[10px]">Handlebars</span>
-                                <button 
-                                    onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors"
-                                    title={isPreviewOpen ? "Collapse Preview" : "Show Preview"}
-                                >
-                                    {isPreviewOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
-                                </button>
+                                {enablePreview && (
+                                    <button 
+                                        onClick={() => setIsPreviewOpen(!isPreviewOpen)}
+                                        className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-0.5 rounded transition-colors"
+                                        title={isPreviewOpen ? "Collapse Preview" : "Show Preview"}
+                                    >
+                                        {isPreviewOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="flex-1 min-h-0 relative">
@@ -339,7 +356,7 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                     </div>
 
                     {/* Resizable Preview */}
-                    {isPreviewOpen && (
+                    {enablePreview && isPreviewOpen && (
                         <>
                              {/* Resize Handle - Only when not stacked */}
                              {!isStacked && (
@@ -416,6 +433,11 @@ export const EmailEditor: React.FC<EmailEditorProps> = ({
                 onInsert={handleInsert}
                 onUpdateContent={(val) => onChange({ ...content, html: val })}
                 onAiAssist={onAiAssist}
+                showVariables={showVariables}
+                showFunctions={showFunctions}
+                showBlocks={showBlocks}
+                showImages={showImages}
+                showChat={showAi}
             />
         </div>
     );
