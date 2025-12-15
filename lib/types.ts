@@ -10,7 +10,8 @@ export enum EditorType {
   DB_QUERY = 'DB_QUERY',
   XML_TEMPLATE = 'XML_TEMPLATE',
   REST_API = 'REST_API',
-  AGENT = 'AGENT'
+  AGENT = 'AGENT',
+  MCP_CLIENT = 'MCP_CLIENT'
 }
 
 export type SqlDialect = 'postgres' | 'mysql' | 'mssql' | 'duckdb' | 'seekdb' | 'postgres-vector';
@@ -20,6 +21,31 @@ export interface DbConnection {
   name: string;
   dialect: SqlDialect;
   connectionString: string;
+}
+
+export interface McpConnectionAuth {
+  type: 'none' | 'basic' | 'bearer' | 'oauth2';
+  basic?: { username: string; password: string };
+  bearer?: { token: string };
+  oauth2?: {
+    clientId: string;
+    clientSecret?: string;
+    authorizationUrl: string;
+    tokenUrl: string;
+    scope: string;
+    redirectUrl: string;
+    pkce?: boolean;
+  };
+}
+
+export interface McpConnection {
+  id: string;
+  name: string;
+  url: string;
+  useProxy?: boolean;
+  headers: RestParam[];
+  env: RestParam[];
+  auth?: McpConnectionAuth;
 }
 
 export interface UserFunction {
@@ -174,6 +200,31 @@ export interface ApiSource {
   specUrl?: string;
   spec?: any;
   lastFetched: number;
+}
+
+// -- MCP Client Definitions --
+export type McpOperation = 'CallTool' | 'ListTools' | 'ReadResource' | 'ListResources' | 'GetPrompt' | 'ListPrompts';
+
+export interface McpState {
+  serverUrl: string; // Legacy/Active, overrides connection if changed manually (if UI allows)
+  serverName: string;
+  headers: RestParam[];
+  env: RestParam[]; // Environment properties
+  operation: McpOperation;
+  toolName: string;
+  toolArguments: string; // Legacy JSON string support
+  args: RestParam[]; // Structured arguments for UI
+  resourceUri: string;
+  promptName: string;
+  promptArguments: string; // JSON string
+  timeout: number;
+  resultVariable: string;
+}
+
+export interface McpToolDefinition {
+  name: string;
+  description?: string;
+  inputSchema?: any;
 }
 
 // -- Agent Editor Definitions --

@@ -1,4 +1,4 @@
-import { UserFunction, DbConnection, HostImage, AgentConfig, EmailMessageState, SmsMessageState } from './types';
+import { UserFunction, DbConnection, HostImage, AgentConfig, EmailMessageState, SmsMessageState, McpState, McpConnection } from './types';
 
 export const DEFAULT_VARIABLES_JSON = `{
   "meta": {
@@ -198,6 +198,22 @@ export const DEFAULT_XML_CONTENT = `<?xml version="1.0" encoding="UTF-8"?>
     </user>
 </root>`;
 
+export const DEFAULT_MCP_STATE: McpState = {
+  serverUrl: 'http://localhost:3000/sse',
+  serverName: 'Local Dev Server',
+  headers: [],
+  env: [],
+  operation: 'CallTool',
+  toolName: '',
+  toolArguments: '{}',
+  args: [],
+  resourceUri: '',
+  promptName: '',
+  promptArguments: '{}',
+  timeout: 30,
+  resultVariable: 'mcpResult'
+};
+
 export const DEFAULT_FUNCTIONS: UserFunction[] = [
     { id: '1', name: 'formatDate', params: ['ts'], body: 'return new Date(ts).toISOString().split("T")[0];' },
     { id: '2', name: 'calcTax', params: ['amount'], body: 'return (Number(amount) * 0.1).toFixed(2);' },
@@ -212,6 +228,16 @@ export const DEFAULT_FUNCTIONS: UserFunction[] = [
 export const DEFAULT_DB_CONNECTIONS: DbConnection[] = [
     { id: '1', name: 'Main Postgres', dialect: 'postgres', connectionString: 'postgres://admin:pass@localhost:5432/main_db' },
     { id: '2', name: 'Legacy MySQL', dialect: 'mysql', connectionString: 'mysql://root:root@192.168.1.50:3306/legacy' }
+];
+
+export const DEFAULT_MCP_CONNECTIONS: McpConnection[] = [
+    { 
+        id: 'mcp_local', 
+        name: 'Local Server', 
+        url: 'http://localhost:3000/sse', 
+        headers: [], 
+        env: [] 
+    }
 ];
 
 export const DEFAULT_HOST_IMAGES: HostImage[] = [

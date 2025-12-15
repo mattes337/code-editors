@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EditorType, UserFunction, DbConnection, HostImage, NamedAuthConfig, ApiSource, AgentConfig, EmailMessageState, SmsMessageState } from '../../lib/types';
+import { EditorType, UserFunction, DbConnection, HostImage, NamedAuthConfig, ApiSource, AgentConfig, EmailMessageState, SmsMessageState, McpState, McpConnection } from '../../lib/types';
 import { JsonEditor } from '../json-editor/JsonEditor';
 import { YamlEditor } from '../yaml-editor/YamlEditor';
 import { EmailEditor } from '../email-editor/EmailEditor';
@@ -10,7 +10,8 @@ import { DbQueryEditor } from '../db-query-editor/DbQueryEditor';
 import { XmlEditor } from '../xml-editor/XmlEditor';
 import { RestEditor } from '../rest-editor/RestEditor';
 import { AgentEditor } from '../agent-editor/AgentEditor';
-import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode, Globe, Bot, FileText, MessageSquare, PanelTop } from 'lucide-react';
+import { McpEditor } from '../mcp-editor/McpEditor';
+import { FileJson, Mail, Workflow, Leaf, Settings, Database, FileCode, Globe, Bot, FileText, MessageSquare, PanelTop, Server } from 'lucide-react';
 import { DEFAULT_EMAIL_SNIPPET_GROUPS, DEFAULT_SQL_DIALECT_DATA, DEFAULT_XML_SNIPPET_GROUPS } from '../../lib/constants';
 import {
   DEFAULT_VARIABLES_JSON,
@@ -22,8 +23,10 @@ import {
   DEFAULT_SCRIPT_CONTENT,
   DEFAULT_SQL_CONTENT,
   DEFAULT_XML_CONTENT,
+  DEFAULT_MCP_STATE,
   DEFAULT_FUNCTIONS,
   DEFAULT_DB_CONNECTIONS,
+  DEFAULT_MCP_CONNECTIONS,
   DEFAULT_HOST_IMAGES,
   DEFAULT_AGENT_CONFIG
 } from '../../lib/defaults';
@@ -37,7 +40,8 @@ import {
   generateXmlAssistResponse,
   generateRestAssistResponse,
   runAgentSimulation,
-  generateAgentAssistResponse
+  generateAgentAssistResponse,
+  generateMcpAssistResponse
 } from '../../lib/ai-service';
 
 export default function App() {
@@ -54,6 +58,7 @@ export default function App() {
   const [sqlContent, setSqlContent] = useState(DEFAULT_SQL_CONTENT);
   const [sqlQueryName, setSqlQueryName] = useState('User Orders Query');
   const [xmlContent, setXmlContent] = useState(DEFAULT_XML_CONTENT);
+  const [mcpContent, setMcpContent] = useState<McpState>(DEFAULT_MCP_STATE);
   
   // Agent State
   const [agentConfig, setAgentConfig] = useState<AgentConfig>(DEFAULT_AGENT_CONFIG);
@@ -74,6 +79,10 @@ export default function App() {
   const [isDbExecuting, setIsDbExecuting] = useState(false);
   const [dbExecutionResult, setDbExecutionResult] = useState<string | null>(null);
   const executionTimeoutRef = useRef<number | null>(null);
+
+  // MCP Connections State
+  const [mcpConnections, setMcpConnections] = useState<McpConnection[]>(DEFAULT_MCP_CONNECTIONS);
+  const [activeMcpConnectionId, setActiveMcpConnectionId] = useState<string>('mcp_local');
 
   // Auth Credentials State for REST Editor
   const [authCredentials, setAuthCredentials] = useState<NamedAuthConfig[]>([]);
@@ -197,6 +206,10 @@ export default function App() {
       } finally {
           setIsAgentRunning(false);
       }
+  };
+
+  const handleMcpAssist = async (prompt: string): Promise<string> => {
+      return generateMcpAssistResponse(prompt, mcpContent, variablesJson, functions);
   };
 
   // Common props for all editors
@@ -326,6 +339,19 @@ export default function App() {
                 {...commonProps}
             />
         );
+      case EditorType.MCP_CLIENT:
+        return (
+            <McpEditor 
+                config={mcpContent}
+                onChange={setMcpContent}
+                connections={mcpConnections}
+                onUpdateConnections={setMcpConnections}
+                activeConnectionId={activeMcpConnectionId}
+                onActiveConnectionChange={setActiveMcpConnectionId}
+                onAiAssist={handleMcpAssist}
+                {...commonProps}
+            />
+        );
       default:
         return <div>Select an editor</div>;
     }
@@ -405,6 +431,12 @@ export default function App() {
                icon={<Bot size={16} />}
                label="Agent"
              />
+             <NavPill 
+               active={activeEditor === EditorType.MCP_CLIENT}
+               onClick={() => setActiveEditor(EditorType.MCP_CLIENT)}
+               icon={<Server size={16} />}
+               label="MCP"
+             />
           </div>
         </div>
 
@@ -414,7 +446,7 @@ export default function App() {
               <Settings size={20} />
            </button>
            <div className="h-4 w-px bg-slate-200 mx-1"></div>
-           <span className="text-xs font-mono text-slate-400">v2.1.0</span>
+           <span className="text-xs font-mono text-slate-400">v2.2.0</span>
         </div>
       </div>
 

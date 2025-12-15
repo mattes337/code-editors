@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
-import { UserFunction, DbConnection, HostImage, ApiSource, AgentConfig } from "./types";
+import { UserFunction, DbConnection, HostImage, ApiSource, AgentConfig, McpState } from "./types";
 import { interpolateString } from "./utils";
 
 const commonInstruction = `
@@ -339,6 +339,19 @@ export const generateRestAssistResponse = async (prompt: string, variablesJson: 
         console.error("AI Error", e);
         return `Error generating response: ${e.message}`;
     }
+};
+
+export const generateMcpAssistResponse = async (prompt: string, config: McpState, variablesJson: string, functions: UserFunction[]) => {
+    const context = `Current Config:\n${JSON.stringify(config, null, 2)}\n\n${getCommonContext(variablesJson, functions)}`;
+    const systemInstruction = `You are an MCP (Model Context Protocol) expert. The user is configuring an MCP Client.
+    
+    ${commonInstruction}
+    
+    Your goal is to help the user configure tool calls, resource reads, or prompt executions.
+    If providing JSON arguments, wrap them in markdown code blocks.
+    Be concise and helpful.`;
+
+    return handleAiAssist(systemInstruction, prompt, context);
 };
 
 export const runAgentSimulation = async (
