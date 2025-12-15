@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
     Play, Server, Box, Terminal, 
-    Wifi, CheckCircle2, AlertCircle, RefreshCw, Loader2, Hammer, Power, ChevronRight, Plug, Link as LinkIcon, Settings, Database
+    Wifi, CheckCircle2, AlertCircle, RefreshCw, Loader2, Hammer, Power, ChevronRight, Plug, Link as LinkIcon, Settings, Database, Globe
 } from 'lucide-react';
 import { McpState, UserFunction, EditorType, RestParam, McpToolDefinition, McpConnection } from '../../lib/types';
 import { CodeEditor } from '../shared-ui/CodeEditor';
@@ -33,6 +33,7 @@ interface McpEditorProps {
     showVariables?: boolean;
     showFunctions?: boolean;
     showAi?: boolean;
+    enableLocalServers?: boolean;
 }
 
 export const McpEditor: React.FC<McpEditorProps> = ({ 
@@ -49,7 +50,8 @@ export const McpEditor: React.FC<McpEditorProps> = ({
     onAiAssist,
     showVariables = true,
     showFunctions = true,
-    showAi = true
+    showAi = true,
+    enableLocalServers = true
 }) => {
     const [result, setResult] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +79,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
     }, [variablesJson]);
 
     const activeConnection = connections.find(c => c.id === activeConnectionId);
+    const isLocalConnection = activeConnection?.type === 'stdio';
 
     const updateConfig = (key: keyof McpState, value: any) => {
         onChange({ ...config, [key]: value });
@@ -234,7 +237,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
 
     // 1. Connect (SSE)
     const handleConnect = () => {
-        if (!activeConnection) return;
+        if (!activeConnection || isLocalConnection) return;
         
         // Close existing
         if (connectionStatus === 'connected' || connectionStatus === 'connecting') {
@@ -506,15 +509,25 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:block">Server</span>
                             <div className="relative flex items-center">
+                                {isLocalConnection && (
+                                    <div className="absolute left-2 text-slate-400 pointer-events-none">
+                                        <Terminal size={14} />
+                                    </div>
+                                )}
+                                {!isLocalConnection && (
+                                    <div className="absolute left-2 text-slate-400 pointer-events-none">
+                                        <Globe size={14} />
+                                    </div>
+                                )}
                                 <select 
                                     value={activeConnectionId}
                                     onChange={(e) => onActiveConnectionChange(e.target.value)}
                                     disabled={connectionStatus === 'connecting'}
-                                    className="appearance-none pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 w-48 truncate cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="appearance-none pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 w-48 truncate cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="">Select Server</option>
                                     {connections.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                        <option key={c.id} value={c.id}>{c.name} {c.type === 'stdio' ? '(Local)' : ''}</option>
                                     ))}
                                 </select>
                                 <button 
@@ -534,19 +547,27 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                                 {statusMessage}
                             </span>
                         )}
-                        <button 
-                            onClick={handleConnect}
-                            disabled={!activeConnection || connectionStatus === 'connecting'}
-                            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all
-                                ${isConnected 
-                                    ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' 
-                                    : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'}
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                            `}
-                        >
-                            {connectionStatus === 'connecting' ? <Loader2 size={14} className="animate-spin" /> : <Power size={14} />}
-                            {isConnected ? 'Disconnect' : 'Connect'}
-                        </button>
+                        
+                        {isLocalConnection ? (
+                            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-2 font-medium">
+                                <AlertCircle size={14} />
+                                Cannot test local servers in browser
+                            </span>
+                        ) : (
+                            <button 
+                                onClick={handleConnect}
+                                disabled={!activeConnection || connectionStatus === 'connecting'}
+                                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all
+                                    ${isConnected 
+                                        ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' 
+                                        : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm'}
+                                    disabled:opacity-50 disabled:cursor-not-allowed
+                                `}
+                            >
+                                {connectionStatus === 'connecting' ? <Loader2 size={14} className="animate-spin" /> : <Power size={14} />}
+                                {isConnected ? 'Disconnect' : 'Connect'}
+                            </button>
+                        )}
                      </div>
                 </div>
 
@@ -563,7 +584,9 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {availableTools.length === 0 && (
                                 <div className="text-center p-6 text-slate-400 text-xs italic">
-                                    {isConnected ? 'No tools found.' : 'Connect to list tools.'}
+                                    {isLocalConnection 
+                                        ? 'Local tools only available in Agent runtime.' 
+                                        : (isConnected ? 'No tools found.' : 'Connect to list tools.')}
                                 </div>
                             )}
                             {availableTools.map(tool => (
@@ -583,7 +606,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                         <div className="p-2 border-t border-slate-200">
                             <button 
                                 onClick={handleRefreshTools} 
-                                disabled={!isConnected}
+                                disabled={!isConnected || isLocalConnection}
                                 className="w-full flex items-center justify-center gap-2 text-xs font-medium text-slate-500 hover:text-teal-600 py-2 hover:bg-white rounded-lg transition-colors disabled:opacity-50"
                             >
                                 <RefreshCw size={12} /> Refresh List
@@ -634,7 +657,9 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
                                 <Box size={64} className="mb-4 opacity-50" />
-                                <p className="text-sm font-medium">Select a tool to configure inputs</p>
+                                <p className="text-sm font-medium">
+                                    {isLocalConnection ? 'Local server selected (Config Only)' : 'Select a tool to configure inputs'}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -687,6 +712,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                 connections={connections}
                 onClose={() => setIsManagerOpen(false)}
                 onUpdateConnections={onUpdateConnections}
+                allowLocal={enableLocalServers}
             />
         </div>
     );

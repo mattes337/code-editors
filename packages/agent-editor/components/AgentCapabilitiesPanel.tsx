@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { AgentConfig, UserFunction, MemoryBackend } from '../../../lib/types';
+import { AgentConfig, UserFunction, MemoryBackend, McpConnection, McpServer } from '../../../lib/types';
 import { 
     CloudLightning, Hammer, Server, Plus, X, 
-    Box, HardDrive, Cpu, CircleOff, Zap, Database
+    Box, HardDrive, Cpu, CircleOff, Zap, Database, Terminal, Globe
 } from 'lucide-react';
-import { CodeEditor } from '../../shared-ui/CodeEditor';
+import { McpConnectionModal } from '../../mcp-editor/McpConnectionModal';
 
 interface Props {
     config: AgentConfig;
@@ -15,9 +15,8 @@ interface Props {
 export const AgentCapabilitiesPanel: React.FC<Props> = ({ config, onChange, functions }) => {
     // MCP Modal Local State
     const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
-    const [mcpName, setMcpName] = useState('');
-    const [mcpConfigJson, setMcpConfigJson] = useState('{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]\n    }\n  }\n}');
-
+    const [selectedMcpId, setSelectedMcpId] = useState<string | null>(null);
+    
     const update = (key: keyof AgentConfig, value: any) => {
         onChange({ ...config, [key]: value });
     };
@@ -32,21 +31,89 @@ export const AgentCapabilitiesPanel: React.FC<Props> = ({ config, onChange, func
         update('connectedTools', Array.from(current));
     };
 
-    const handleAddMcp = () => {
-        if (!mcpName) return;
-        const newServer = {
-            id: Date.now().toString(),
-            name: mcpName,
-            config: mcpConfigJson
-        };
-        update('mcpServers', [...config.mcpServers, newServer]);
-        setIsMcpModalOpen(false);
-        setMcpName('');
-    };
-
     const handleRemoveMcp = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         update('mcpServers', config.mcpServers.filter(s => s.id !== id));
+    };
+
+    const handleEditMcp = (id: string) => {
+        setSelectedMcpId(id);
+        setIsMcpModalOpen(true);
+    };
+
+    const handleAddMcp = () => {
+        setSelectedMcpId('new');
+        setIsMcpModalOpen(true);
+    };
+
+    // --- MCP Server / Connection Mapper ---
+    // AgentConfig uses McpServer { id, name, config: string }
+    // Modal uses McpConnection { id, name, url, type, stdIoConfig ... }
+    
+    const serverToConnection = (server: McpServer): McpConnection => {
+        let parsedConfig: any = {};
+        try {
+            parsedConfig = JSON.parse(server.config);
+        } catch {}
+
+        // Heuristic: If config has 'command', it's stdio. Else likely sse.
+        const isStdio = !!parsedConfig.command;
+        
+        return {
+            id: server.id,
+            name: server.name,
+            type: isStdio ? 'stdio' : 'sse',
+            stdIoConfig: isStdio ? server.config : '{}',
+            url: !isStdio ? (parsedConfig.url || '') : '',
+            headers: [], // Ideally parsed from config if available, simplified here
+            env: [],
+            auth: { type: 'none' } // Simplified, assuming config string has everything
+        };
+    };
+
+    const connectionToServer = (conn: McpConnection): McpServer => {
+        let configStr = '{}';
+        
+        if (conn.type === 'stdio') {
+            configStr = conn.stdIoConfig || '{}';
+        } else {
+            // Reconstruct JSON config from SSE fields
+            const configObj: any = {
+                url: conn.url,
+            };
+            
+            // Add headers if present
+            if (conn.headers && conn.headers.length > 0) {
+                configObj.headers = conn.headers.reduce((acc, h) => {
+                    if (h.enabled) acc[h.key] = h.value;
+                    return acc;
+                }, {} as Record<string, string>);
+            }
+            
+            // Add env if present
+            if (conn.env && conn.env.length > 0) {
+                configObj.env = conn.env.reduce((acc, e) => {
+                    if (e.enabled) acc[e.key] = e.value;
+                    return acc;
+                }, {} as Record<string, string>);
+            }
+
+            configStr = JSON.stringify(configObj, null, 2);
+        }
+
+        return {
+            id: conn.id,
+            name: conn.name,
+            config: configStr
+        };
+    };
+
+    // Derived connections list for the modal
+    const derivedConnections = config.mcpServers.map(serverToConnection);
+
+    const handleUpdateConnections = (newConnections: McpConnection[]) => {
+        const newServers = newConnections.map(connectionToServer);
+        update('mcpServers', newServers);
     };
 
     const memoryOptions: {id: MemoryBackend, label: string, icon: React.ElementType, desc: string}[] = [
@@ -81,7 +148,7 @@ export const AgentCapabilitiesPanel: React.FC<Props> = ({ config, onChange, func
                     <div className="grid grid-cols-2 gap-3 mb-3">
                         {/* Add MCP Button */}
                         <div 
-                            onClick={() => setIsMcpModalOpen(true)}
+                            onClick={handleAddMcp}
                             className="p-3 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-teal-600 hover:border-teal-400 hover:bg-teal-50 cursor-pointer transition-all group min-h-[100px]"
                         >
                             <Plus size={24} className="group-hover:scale-110 transition-transform" />
@@ -89,20 +156,21 @@ export const AgentCapabilitiesPanel: React.FC<Props> = ({ config, onChange, func
                         </div>
 
                         {/* MCP Servers */}
-                        {config.mcpServers.map(server => (
+                        {derivedConnections.map(server => (
                             <div 
                                 key={server.id}
-                                className="p-3 rounded-xl border bg-slate-50 border-slate-200 flex flex-col justify-between min-h-[100px] relative group"
+                                onClick={() => handleEditMcp(server.id)}
+                                className="p-3 rounded-xl border bg-slate-50 border-slate-200 flex flex-col justify-between min-h-[100px] relative group cursor-pointer hover:border-teal-300 hover:shadow-sm transition-all"
                             >
                                 <div>
                                     <div className="flex justify-between items-start">
-                                        <Server size={18} className="text-indigo-500" />
+                                        {server.type === 'stdio' ? <Terminal size={18} className="text-indigo-500" /> : <Globe size={18} className="text-teal-500" />}
                                     </div>
-                                    <div className="text-xs font-bold text-slate-700 mt-2">
+                                    <div className="text-xs font-bold text-slate-700 mt-2 truncate" title={server.name}>
                                         {server.name}
                                     </div>
                                     <div className="text-[10px] text-slate-400 truncate mt-1">
-                                        MCP Protocol
+                                        {server.type === 'stdio' ? 'Local Process' : 'Remote SSE'}
                                     </div>
                                 </div>
                                 <button 
@@ -217,42 +285,15 @@ export const AgentCapabilitiesPanel: React.FC<Props> = ({ config, onChange, func
                 </div>
             </div>
 
-             {/* MCP Modal */}
-             {isMcpModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-800">Add MCP Server</h3>
-                            <button onClick={() => setIsMcpModalOpen(false)}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Server Name</label>
-                                <input 
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                                    placeholder="My Filesystem Server"
-                                    value={mcpName}
-                                    onChange={e => setMcpName(e.target.value)}
-                                />
-                            </div>
-                            <div className="h-[200px]">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Configuration (JSON)</label>
-                                <div className="h-full border border-slate-300 rounded-lg overflow-hidden">
-                                    <CodeEditor 
-                                        language="json"
-                                        value={mcpConfigJson}
-                                        onChange={val => setMcpConfigJson(val || '')}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
-                            <button onClick={() => setIsMcpModalOpen(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-medium">Cancel</button>
-                            <button onClick={handleAddMcp} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium">Add Server</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+             {/* Unified MCP Modal for editing both remote and local */}
+             <McpConnectionModal 
+                isOpen={isMcpModalOpen}
+                connections={derivedConnections}
+                onClose={() => setIsMcpModalOpen(false)}
+                onUpdateConnections={handleUpdateConnections}
+                allowLocal={true} // Agents can always configure local servers
+                initialEditingId={selectedMcpId}
+            />
         </div>
     );
 };

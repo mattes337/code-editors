@@ -46,6 +46,9 @@ export interface McpConnection {
   headers: RestParam[];
   env: RestParam[];
   auth?: McpConnectionAuth;
+  // Support for local/stdio servers
+  type?: 'sse' | 'stdio';
+  stdIoConfig?: string; // JSON string for local configuration
 }
 
 export interface UserFunction {
