@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
     Play, Server, Box, Terminal, 
-    Wifi, CheckCircle2, AlertCircle, RefreshCw, Loader2, Hammer, Power, ChevronRight, Plug, Link as LinkIcon, Settings, Database, Globe
+    Wifi, CheckCircle2, AlertCircle, RefreshCw, Loader2, Hammer, Power, ChevronRight, Plug, Link as LinkIcon, Settings, Database, Globe,
+    PanelRightClose, PanelRightOpen
 } from 'lucide-react';
 import { McpState, UserFunction, EditorType, RestParam, McpToolDefinition, McpConnection } from '../../lib/types';
 import { CodeEditor } from '../shared-ui/CodeEditor';
@@ -60,6 +61,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
     const [availableTools, setAvailableTools] = useState<McpToolDefinition[]>([]);
     
     const [isManagerOpen, setIsManagerOpen] = useState(false);
+    const [isOutputOpen, setIsOutputOpen] = useState(false);
 
     // Connection State
     const eventSourceRef = useRef<EventSource | null>(null);
@@ -456,6 +458,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
         if (!config.toolName || !postEndpoint) return;
         setIsLoading(true);
         setResult('');
+        setIsOutputOpen(true); // Auto-expand output
 
         try {
             // Build Args Object
@@ -598,7 +601,7 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                                             ? 'bg-white border-teal-500 shadow-sm ring-1 ring-teal-500/20' 
                                             : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
                                 >
-                                    <div className={`text-sm font-bold ${config.toolName === tool.name ? 'text-teal-700' : 'text-slate-700'}`}>{tool.name}</div>
+                                    <div className={`text-sm font-bold truncate ${config.toolName === tool.name ? 'text-teal-700' : 'text-slate-700'}`}>{tool.name}</div>
                                     <div className="text-[10px] text-slate-400 truncate mt-0.5">{tool.description}</div>
                                 </div>
                             ))}
@@ -615,27 +618,36 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                     </div>
 
                     {/* Center: Tool Configuration */}
-                    <div className="flex-1 flex flex-col bg-white border-r border-slate-200">
+                    <div className="flex-1 flex flex-col bg-white border-r border-slate-200 min-w-0">
                         {config.toolName ? (
                             <div className="flex flex-col h-full">
-                                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                                    <div>
+                                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center gap-4">
+                                    <div className="min-w-0 flex-1">
                                         <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                            <Hammer size={20} className="text-teal-600" />
-                                            {config.toolName}
+                                            <Hammer size={20} className="text-teal-600 shrink-0" />
+                                            <span className="truncate">{config.toolName}</span>
                                         </h2>
-                                        <p className="text-xs text-slate-400 mt-1">
+                                        <p className="text-xs text-slate-400 mt-1 line-clamp-2" title={availableTools.find(t => t.name === config.toolName)?.description}>
                                             {availableTools.find(t => t.name === config.toolName)?.description}
                                         </p>
                                     </div>
-                                    <button 
-                                        onClick={handleExecute}
-                                        disabled={isLoading || !isConnected}
-                                        className="bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 text-white px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-teal-600/20 transition-all active:scale-95"
-                                    >
-                                        {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="currentColor" />}
-                                        Run Tool
-                                    </button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button 
+                                            onClick={handleExecute}
+                                            disabled={isLoading || !isConnected}
+                                            className="bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 text-white px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-teal-600/20 transition-all active:scale-95"
+                                        >
+                                            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} fill="currentColor" />}
+                                            Run Tool
+                                        </button>
+                                        <button
+                                            onClick={() => setIsOutputOpen(!isOutputOpen)}
+                                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                            title={isOutputOpen ? "Collapse Output" : "Expand Output"}
+                                        >
+                                            {isOutputOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex-1 overflow-hidden flex flex-col p-6 bg-slate-50/30">
@@ -655,41 +667,51 @@ export const McpEditor: React.FC<McpEditorProps> = ({
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
+                            <div className="flex-1 flex flex-col items-center justify-center text-slate-300 relative">
                                 <Box size={64} className="mb-4 opacity-50" />
                                 <p className="text-sm font-medium">
                                     {isLocalConnection ? 'Local server selected (Config Only)' : 'Select a tool to configure inputs'}
                                 </p>
+                                <div className="absolute top-4 right-4">
+                                     <button
+                                        onClick={() => setIsOutputOpen(!isOutputOpen)}
+                                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                    >
+                                        {isOutputOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
 
                     {/* Right: Output */}
-                    <div className="w-[400px] flex flex-col bg-slate-50">
-                        <div className="px-4 py-2 border-b border-slate-200 bg-white flex justify-between items-center h-10 shrink-0">
-                             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Execution Output</div>
-                             {result && (
-                                 <div className="text-[10px] text-slate-400 font-mono">
-                                     {new Blob([result]).size} bytes
-                                 </div>
-                             )}
+                    {isOutputOpen && (
+                        <div className="w-[400px] flex flex-col bg-slate-50 border-l border-slate-200">
+                            <div className="px-4 py-2 border-b border-slate-200 bg-white flex justify-between items-center h-10 shrink-0">
+                                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Execution Output</div>
+                                 {result && (
+                                     <div className="text-[10px] text-slate-400 font-mono">
+                                         {new Blob([result]).size} bytes
+                                     </div>
+                                 )}
+                            </div>
+                            <div className="flex-1 overflow-hidden relative">
+                                 {result ? (
+                                    <CodeEditor 
+                                        language="json"
+                                        value={result}
+                                        onChange={() => {}}
+                                        readOnly={true}
+                                    />
+                                 ) : (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
+                                        <Terminal size={48} className="mx-auto mb-4 opacity-50" />
+                                        <p className="text-xs mt-1">Output will appear here.</p>
+                                    </div>
+                                 )}
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-hidden relative">
-                             {result ? (
-                                <CodeEditor 
-                                    language="json"
-                                    value={result}
-                                    onChange={() => {}}
-                                    readOnly={true}
-                                />
-                             ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
-                                    <Terminal size={48} className="mx-auto mb-4 opacity-50" />
-                                    <p className="text-xs mt-1">Output will appear here.</p>
-                                </div>
-                             )}
-                        </div>
-                    </div>
+                    )}
 
                 </div>
             </div>

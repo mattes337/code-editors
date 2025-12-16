@@ -236,7 +236,16 @@ export const DEFAULT_MCP_CONNECTIONS: McpConnection[] = [
         name: 'Local Server', 
         url: 'http://localhost:3000/sse', 
         headers: [], 
-        env: [] 
+        env: [],
+        type: 'sse'
+    },
+    {
+        id: 'mcp_context7',
+        name: 'Context7 Demo',
+        url: 'https://mcp.context7.com/mcp',
+        headers: [],
+        env: [],
+        type: 'sse'
     }
 ];
 
